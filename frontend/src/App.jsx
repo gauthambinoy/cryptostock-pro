@@ -24,6 +24,11 @@ import Leaderboard from './pages/Leaderboard';
 import Compare from './pages/Compare';
 import SharePortfolio from './pages/SharePortfolio';
 import FearGreed from './pages/FearGreed';
+import RiskAnalysis from './pages/RiskAnalysis';
+import Screener from './pages/Screener';
+import DCA from './pages/DCA';
+import TaxReport from './pages/TaxReport';
+import Rebalance from './pages/Rebalance';
 
 // Components
 import Layout from './components/Layout';
@@ -104,6 +109,11 @@ function App() {
             <Route path="compare" element={<Compare />} />
             <Route path="share" element={<SharePortfolio />} />
             <Route path="fear-greed" element={<FearGreed />} />
+            <Route path="risk" element={<RiskAnalysis />} />
+            <Route path="screener" element={<Screener />} />
+            <Route path="dca" element={<DCA />} />
+            <Route path="tax-report" element={<TaxReport />} />
+            <Route path="rebalance" element={<Rebalance />} />
           </Route>
 
           {/* Catch all */}

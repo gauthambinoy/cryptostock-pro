@@ -330,3 +330,189 @@ async def get_performance_history(
         })
 
     return history
+
+
+@router.get("/{portfolio_id}/risk-score")
+async def get_risk_score(
+    portfolio_id: int,
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(get_db)
+):
+    portfolio = db.query(models.Portfolio).filter(
+        models.Portfolio.id == portfolio_id,
+        models.Portfolio.user_id == current_user.id
+    ).first()
+    if not portfolio:
+        raise HTTPException(status_code=404, detail="Portfolio not found")
+
+    market_service = get_market_service()
+    all_returns = []
+    market_returns = []
+    holding_values = []
+    crypto_value = 0
+    total_value = 0
+    sectors = set()
+
+    # Get S&P 500 data for beta calculation
+    try:
+        spy = yf.Ticker("^GSPC")
+        spy_hist = spy.history(period="1y")
+        spy_prices = spy_hist["Close"].tolist() if len(spy_hist) > 0 else []
+        market_returns = _daily_returns(spy_prices)
+    except:
+        market_returns = []
+
+    for holding in portfolio.holdings:
+        if holding.asset_type == models.AssetType.STOCK:
+            quote = market_service.get_stock_quote(holding.symbol)
+            try:
+                ticker = yf.Ticker(holding.symbol)
+                hist = ticker.history(period="1y")
+                prices = hist["Close"].tolist() if len(hist) > 0 else []
+                rets = _daily_returns(prices)
+                all_returns.extend(rets)
+            except:
+                pass
+        else:
+            quote = await market_service.get_crypto_quote(holding.symbol)
+
+        value = holding.quantity * (quote.price if quote else holding.buy_price)
+        holding_values.append(value)
+        total_value += value
+        sectors.add(SECTOR_MAP.get(holding.symbol, "Other"))
+
+        if holding.asset_type == models.AssetType.CRYPTO:
+            crypto_value += value
+
+    # Concentration risk: if top holding > 50% of portfolio, add 25 points
+    if total_value > 0 and holding_values:
+        top_pct = max(holding_values) / total_value * 100
+    else:
+        top_pct = 0
+    concentration = 25 if top_pct > 50 else round(top_pct / 50 * 25, 1)
+
+    # Volatility: map 0-100% annualized vol to 0-25 points
+    annualized_vol = _std(all_returns) * sqrt(252) * 100 if all_returns else 0
+    volatility_score = min(25, round(annualized_vol / 100 * 25, 1))
+
+    # Crypto exposure: crypto_pct * 0.2 (max 20 points)
+    crypto_pct = (crypto_value / total_value * 100) if total_value > 0 else 0
+    crypto_score = min(20, round(crypto_pct * 0.2, 1))
+
+    # Diversification: fewer assets = more risk (1 asset = 20, 10+ = 0)
+    num_assets = len(portfolio.holdings)
+    if num_assets >= 10:
+        diversification_score = 0
+    else:
+        diversification_score = round((10 - num_assets) / 9 * 20, 1)
+
+    # Beta: map 0-2 beta to 0-10 points
+    min_len = min(len(all_returns), len(market_returns))
+    if min_len > 10:
+        ar = all_returns[:min_len]
+        mr = market_returns[:min_len]
+        var_m = _std(mr) ** 2
+        beta = _covariance(ar, mr) / var_m if var_m > 0 else 1
+    else:
+        beta = 1
+    beta_score = min(10, round(max(0, beta) / 2 * 10, 1))
+
+    risk = min(100, max(1, round(concentration + volatility_score + crypto_score + diversification_score + beta_score)))
+
+    if risk <= 25:
+        risk_level = "Low"
+    elif risk <= 50:
+        risk_level = "Medium"
+    elif risk <= 75:
+        risk_level = "High"
+    else:
+        risk_level = "Very High"
+
+    return {
+        "risk_score": risk,
+        "risk_level": risk_level,
+        "factors": {
+            "concentration": {"score": concentration, "max": 25, "top_holding_pct": round(top_pct, 2)},
+            "volatility": {"score": volatility_score, "max": 25, "annualized_vol_pct": round(annualized_vol, 2)},
+            "crypto_exposure": {"score": crypto_score, "max": 20, "crypto_pct": round(crypto_pct, 2)},
+            "diversification": {"score": diversification_score, "max": 20, "num_assets": num_assets, "num_sectors": len(sectors)},
+            "beta": {"score": beta_score, "max": 10, "beta": round(beta, 3)},
+        }
+    }
+
+
+@router.get("/{portfolio_id}/monte-carlo")
+async def get_monte_carlo(
+    portfolio_id: int,
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(get_db)
+):
+    import random
+
+    portfolio = db.query(models.Portfolio).filter(
+        models.Portfolio.id == portfolio_id,
+        models.Portfolio.user_id == current_user.id
+    ).first()
+    if not portfolio:
+        raise HTTPException(status_code=404, detail="Portfolio not found")
+
+    market_service = get_market_service()
+    all_returns = []
+    current_value = 0
+
+    for holding in portfolio.holdings:
+        if holding.asset_type == models.AssetType.STOCK:
+            quote = market_service.get_stock_quote(holding.symbol)
+            try:
+                ticker = yf.Ticker(holding.symbol)
+                hist = ticker.history(period="1y")
+                prices = hist["Close"].tolist() if len(hist) > 0 else []
+                rets = _daily_returns(prices)
+                all_returns.extend(rets)
+            except:
+                pass
+        else:
+            quote = await market_service.get_crypto_quote(holding.symbol)
+
+        current_value += holding.quantity * (quote.price if quote else holding.buy_price)
+
+    if not all_returns:
+        mean_return = 0.0004  # ~10% annual default
+        std_return = 0.012    # ~19% annual vol default
+    else:
+        mean_return = _mean(all_returns)
+        std_return = _std(all_returns)
+
+    days = 252
+    simulations = 1000
+    results = []
+    sample_paths = []
+
+    for sim_idx in range(simulations):
+        value = current_value
+        path = [value]
+        for _ in range(days):
+            daily_return = random.gauss(mean_return, std_return)
+            value *= (1 + daily_return)
+            path.append(value)
+        results.append(value)
+        # Sample every 50th simulation for the fan chart
+        if sim_idx % 50 == 0:
+            sample_paths.append([round(v, 2) for v in path])
+
+    results.sort()
+    n = len(results)
+
+    return {
+        "current_value": round(current_value, 2),
+        "worst_case": round(results[int(n * 0.05)], 2),
+        "pessimistic": round(results[int(n * 0.25)], 2),
+        "median": round(results[int(n * 0.50)], 2),
+        "optimistic": round(results[int(n * 0.75)], 2),
+        "best_case": round(results[int(n * 0.95)], 2),
+        "simulations": simulations,
+        "time_horizon_days": days,
+        "mean_daily_return": round(mean_return, 6),
+        "std_daily_return": round(std_return, 6),
+        "sample_paths": sample_paths,
+    }
