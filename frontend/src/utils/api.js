@@ -163,6 +163,15 @@ export const exportAPI = {
   csv: (portfolioId) => api.get(`/export/portfolio/${portfolioId}/csv`, { responseType: 'blob' }),
 };
 
+// Tools API
+export const toolsAPI = {
+  screener: (params) => api.get('/tools/screener', { params }),
+  levels: (symbol, assetType = 'stock') => api.get(`/tools/levels/${symbol}?asset_type=${assetType}`),
+  dca: (params) => api.get('/tools/dca', { params }),
+  taxReport: () => api.get('/tools/tax-report'),
+  rebalance: (portfolioId, strategy = 'equal_weight') => api.get(`/tools/rebalance/${portfolioId}?strategy=${strategy}`),
+};
+
 // WebSocket connection for real-time updates
 export const createWebSocket = (onMessage) => {
   const wsUrl = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/api/market/ws`;

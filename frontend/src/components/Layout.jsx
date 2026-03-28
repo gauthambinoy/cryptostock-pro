@@ -28,7 +28,12 @@ import {
   Gauge,
   Sun,
   Moon,
-  FileDown
+  FileDown,
+  Shield,
+  SlidersHorizontal,
+  Calculator,
+  FileText,
+  Scale
 } from 'lucide-react';
 
 const Layout = () => {
@@ -50,6 +55,8 @@ const Layout = () => {
         { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
         { path: '/portfolio', icon: Briefcase, label: 'Portfolio' },
         { path: '/analytics', icon: BarChart3, label: 'Analytics' },
+        { path: '/risk', icon: Shield, label: 'Risk Analysis' },
+        { path: '/rebalance', icon: Scale, label: 'Rebalance' },
       ]
     },
     {
@@ -57,6 +64,7 @@ const Layout = () => {
       items: [
         { path: '/markets', icon: TrendingUp, label: 'Markets' },
         { path: '/watchlist', icon: Eye, label: 'Watchlist' },
+        { path: '/screener', icon: SlidersHorizontal, label: 'Screener' },
         { path: '/gainers', icon: Flame, label: 'Top Gainers' },
         { path: '/losers', icon: TrendingDown, label: 'Top Losers' },
         { path: '/news', icon: Newspaper, label: 'News Feed' },
@@ -67,6 +75,7 @@ const Layout = () => {
       title: 'Tools',
       items: [
         { path: '/prediction', icon: Brain, label: 'AI Prediction' },
+        { path: '/dca', icon: Calculator, label: 'DCA Calculator' },
         { path: '/converter', icon: ArrowRightLeft, label: 'Converter' },
         { path: '/alerts', icon: Bell, label: 'Alerts' },
         { path: '/compare', icon: GitCompare, label: 'Compare' },
@@ -76,6 +85,7 @@ const Layout = () => {
       title: 'Finance',
       items: [
         { path: '/transactions', icon: ArrowLeftRight, label: 'Transactions' },
+        { path: '/tax-report', icon: FileText, label: 'Tax Report' },
         { path: '/goals', icon: Target, label: 'Goals' },
         { path: '/dividends', icon: DollarSign, label: 'Dividends' },
       ]
