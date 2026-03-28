@@ -79,6 +79,90 @@ export const alertsAPI = {
   check: () => api.post('/alerts/check'),
 };
 
+// Watchlist API
+export const watchlistAPI = {
+  getAll: () => api.get('/watchlist'),
+  add: (symbol, assetType) => api.post(`/watchlist?symbol=${symbol}&asset_type=${assetType}`),
+  remove: (itemId) => api.delete(`/watchlist/${itemId}`),
+};
+
+// Transactions API
+export const transactionsAPI = {
+  getAll: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return api.get(`/transactions${query ? '?' + query : ''}`);
+  },
+  create: (data) => api.post('/transactions', data),
+  export: () => api.get('/transactions/export', { responseType: 'blob' }),
+  summary: () => api.get('/transactions/summary'),
+};
+
+// Goals API
+export const goalsAPI = {
+  getAll: () => api.get('/goals'),
+  create: (data) => api.post('/goals', data),
+  update: (goalId, data) => api.put(`/goals/${goalId}`, data),
+  delete: (goalId) => api.delete(`/goals/${goalId}`),
+};
+
+// Dividends API
+export const dividendsAPI = {
+  getAll: () => api.get('/dividends'),
+  create: (data) => api.post('/dividends', data),
+  delete: (dividendId) => api.delete(`/dividends/${dividendId}`),
+  summary: () => api.get('/dividends/summary'),
+};
+
+// Analytics API
+export const analyticsAPI = {
+  getAdvanced: (portfolioId) => api.get(`/analytics/${portfolioId}/advanced`),
+  getCorrelation: (portfolioId) => api.get(`/analytics/${portfolioId}/correlation`),
+  getPnlCalendar: (portfolioId) => api.get(`/analytics/${portfolioId}/pnl-calendar`),
+  getSectorBreakdown: (portfolioId) => api.get(`/analytics/${portfolioId}/sector-breakdown`),
+  getPerformanceHistory: (portfolioId, days = 90) => api.get(`/analytics/${portfolioId}/performance-history?days=${days}`),
+};
+
+// News API
+export const newsAPI = {
+  getAll: () => api.get('/news'),
+  getForSymbol: (symbol) => api.get(`/news/symbol/${symbol}`),
+};
+
+// Prediction API
+export const predictionAPI = {
+  predict: (symbol, assetType = 'stock') => api.get(`/prediction/${symbol}?asset_type=${assetType}`),
+};
+
+// Converter API
+export const converterAPI = {
+  convert: (from, to, amount) => api.get(`/converter/convert?from_currency=${from}&to_currency=${to}&amount=${amount}`),
+  cryptoConvert: (from, to, amount) => api.get(`/converter/crypto-convert?from_symbol=${from}&to_symbol=${to}&amount=${amount}`),
+  rates: (base = 'USD') => api.get(`/converter/rates?base=${base}`),
+};
+
+// Leaderboard API
+export const leaderboardAPI = {
+  getAll: () => api.get('/leaderboard'),
+};
+
+// Share API
+export const shareAPI = {
+  create: (portfolioId) => api.post(`/share/${portfolioId}`),
+  get: (shareId) => api.get(`/share/${shareId}`),
+};
+
+// Preferences API
+export const preferencesAPI = {
+  get: () => api.get('/preferences'),
+  update: (data) => api.put('/preferences', data),
+};
+
+// Export API
+export const exportAPI = {
+  pdfData: (portfolioId) => api.get(`/export/portfolio/${portfolioId}/pdf`),
+  csv: (portfolioId) => api.get(`/export/portfolio/${portfolioId}/csv`, { responseType: 'blob' }),
+};
+
 // WebSocket connection for real-time updates
 export const createWebSocket = (onMessage) => {
   const wsUrl = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/api/market/ws`;

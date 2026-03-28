@@ -12,7 +12,12 @@ from contextlib import asynccontextmanager
 
 from .config import get_settings
 from .database import init_db
-from .routers import auth, portfolio, market, alerts
+from .routers import (
+    auth, portfolio, market, alerts,
+    analytics, watchlist, transactions, goals,
+    dividends, news, leaderboard, prediction,
+    converter, share, preferences, export
+)
 
 settings = get_settings()
 
@@ -88,6 +93,18 @@ app.include_router(auth.router)
 app.include_router(portfolio.router)
 app.include_router(market.router)
 app.include_router(alerts.router)
+app.include_router(watchlist.router)
+app.include_router(transactions.router)
+app.include_router(goals.router)
+app.include_router(dividends.router)
+app.include_router(news.router)
+app.include_router(leaderboard.router)
+app.include_router(analytics.router)
+app.include_router(prediction.router)
+app.include_router(converter.router)
+app.include_router(share.router)
+app.include_router(preferences.router)
+app.include_router(export.router)
 
 
 # Health check endpoint

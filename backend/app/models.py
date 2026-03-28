@@ -38,6 +38,11 @@ class User(Base):
     # Relationships
     portfolios = relationship("Portfolio", back_populates="owner", cascade="all, delete-orphan")
     alerts = relationship("Alert", back_populates="owner", cascade="all, delete-orphan")
+    watchlist = relationship("WatchlistItem", backref="user", cascade="all, delete-orphan")
+    transactions = relationship("Transaction", backref="user", cascade="all, delete-orphan")
+    goals = relationship("Goal", backref="user", cascade="all, delete-orphan")
+    dividends = relationship("Dividend", backref="user", cascade="all, delete-orphan")
+    preferences = relationship("UserPreference", backref="user", cascade="all, delete-orphan", uselist=False)
 
 
 class Portfolio(Base):
@@ -103,3 +108,62 @@ class WatchlistItem(Base):
     symbol = Column(String(20), nullable=False, index=True)
     asset_type = Column(Enum(AssetType), nullable=False)
     added_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class Transaction(Base):
+    """Transaction history for buy/sell operations"""
+    __tablename__ = "transactions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    portfolio_id = Column(Integer, ForeignKey("portfolios.id", ondelete="CASCADE"), nullable=False)
+    symbol = Column(String(20), nullable=False, index=True)
+    name = Column(String(255))
+    asset_type = Column(Enum(AssetType), nullable=False)
+    transaction_type = Column(String(10), nullable=False)
+    quantity = Column(Float, nullable=False)
+    price = Column(Float, nullable=False)
+    total_amount = Column(Float, nullable=False)
+    notes = Column(String(500))
+    transaction_date = Column(DateTime(timezone=True), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class Goal(Base):
+    """Financial goals tracker"""
+    __tablename__ = "goals"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    name = Column(String(200), nullable=False)
+    target_amount = Column(Float, nullable=False)
+    current_amount = Column(Float, default=0)
+    deadline = Column(DateTime(timezone=True))
+    is_completed = Column(Boolean, default=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class Dividend(Base):
+    """Dividend tracking"""
+    __tablename__ = "dividends"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    symbol = Column(String(20), nullable=False, index=True)
+    amount_per_share = Column(Float, nullable=False)
+    shares_held = Column(Float, nullable=False)
+    total_amount = Column(Float, nullable=False)
+    payment_date = Column(DateTime(timezone=True), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class UserPreference(Base):
+    """User preferences for theme, currency, etc."""
+    __tablename__ = "user_preferences"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True)
+    theme = Column(String(20), default="dark")
+    currency = Column(String(10), default="USD")
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())

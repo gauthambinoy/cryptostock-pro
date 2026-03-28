@@ -205,3 +205,200 @@ class PortfolioPerformance(BaseModel):
     worst_performer: Optional[HoldingResponse] = None
     allocation: dict  # symbol -> percentage
     history: List[PerformanceData] = []
+
+
+# ============== Watchlist Schemas ==============
+
+class WatchlistCreate(BaseModel):
+    symbol: str = Field(..., max_length=20)
+    asset_type: AssetType
+
+class WatchlistResponse(BaseModel):
+    id: int
+    symbol: str
+    asset_type: AssetType
+    added_at: datetime
+    current_price: Optional[float] = None
+    change: Optional[float] = None
+    change_percent: Optional[float] = None
+    name: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+# ============== Transaction Schemas ==============
+
+class TransactionCreate(BaseModel):
+    portfolio_id: int
+    symbol: str = Field(..., max_length=20)
+    name: Optional[str] = None
+    asset_type: AssetType
+    transaction_type: str = Field(..., pattern="^(buy|sell)$")
+    quantity: float = Field(..., gt=0)
+    price: float = Field(..., gt=0)
+    notes: Optional[str] = Field(None, max_length=500)
+    transaction_date: datetime
+
+class TransactionResponse(BaseModel):
+    id: int
+    portfolio_id: int
+    symbol: str
+    name: Optional[str]
+    asset_type: AssetType
+    transaction_type: str
+    quantity: float
+    price: float
+    total_amount: float
+    notes: Optional[str]
+    transaction_date: datetime
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# ============== Goal Schemas ==============
+
+class GoalCreate(BaseModel):
+    name: str = Field(..., max_length=200)
+    target_amount: float = Field(..., gt=0)
+    current_amount: float = Field(default=0, ge=0)
+    deadline: Optional[datetime] = None
+
+class GoalUpdate(BaseModel):
+    name: Optional[str] = Field(None, max_length=200)
+    target_amount: Optional[float] = Field(None, gt=0)
+    current_amount: Optional[float] = Field(None, ge=0)
+    deadline: Optional[datetime] = None
+    is_completed: Optional[bool] = None
+
+class GoalResponse(BaseModel):
+    id: int
+    name: str
+    target_amount: float
+    current_amount: float
+    deadline: Optional[datetime]
+    is_completed: bool
+    progress_percent: Optional[float] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# ============== Dividend Schemas ==============
+
+class DividendCreate(BaseModel):
+    symbol: str = Field(..., max_length=20)
+    amount_per_share: float = Field(..., gt=0)
+    shares_held: float = Field(..., gt=0)
+    payment_date: datetime
+
+class DividendResponse(BaseModel):
+    id: int
+    symbol: str
+    amount_per_share: float
+    shares_held: float
+    total_amount: float
+    payment_date: datetime
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# ============== User Preferences Schemas ==============
+
+class PreferencesUpdate(BaseModel):
+    theme: Optional[str] = Field(None, pattern="^(dark|light)$")
+    currency: Optional[str] = Field(None, max_length=10)
+
+class PreferencesResponse(BaseModel):
+    theme: str
+    currency: str
+
+    class Config:
+        from_attributes = True
+
+
+# ============== Advanced Analytics Schemas ==============
+
+class AdvancedAnalytics(BaseModel):
+    sharpe_ratio: Optional[float] = None
+    volatility: Optional[float] = None
+    beta: Optional[float] = None
+    max_drawdown: Optional[float] = None
+    cagr: Optional[float] = None
+    total_return: Optional[float] = None
+
+class CorrelationData(BaseModel):
+    symbols: List[str]
+    matrix: List[List[float]]
+
+class PnLCalendarEntry(BaseModel):
+    date: str
+    pnl: float
+
+class SectorAllocation(BaseModel):
+    sector: str
+    percentage: float
+    value: float
+
+
+# ============== News Schemas ==============
+
+class NewsArticle(BaseModel):
+    title: str
+    description: Optional[str] = None
+    url: str
+    source: Optional[str] = None
+    published_at: Optional[str] = None
+    image_url: Optional[str] = None
+
+
+# ============== AI Prediction Schemas ==============
+
+class PredictionResponse(BaseModel):
+    symbol: str
+    signal: str
+    confidence: float
+    reasons: List[str]
+    current_price: float
+    predicted_direction: str
+
+
+# ============== Currency Converter Schemas ==============
+
+class CurrencyConversion(BaseModel):
+    from_currency: str
+    to_currency: str
+    amount: float
+    result: float
+    rate: float
+
+
+# ============== Leaderboard Schemas ==============
+
+class LeaderboardEntry(BaseModel):
+    rank: int
+    username: str
+    total_return_percent: float
+    portfolio_value: float
+
+
+# ============== Share Portfolio Schemas ==============
+
+class ShareResponse(BaseModel):
+    share_id: str
+    url: str
+    expires_at: Optional[datetime] = None
+
+class SharedPortfolioData(BaseModel):
+    portfolio_name: str
+    total_value: float
+    total_gain_loss: float
+    total_gain_loss_percent: float
+    holdings_count: int
+    top_holdings: List[dict]
+    created_at: str
