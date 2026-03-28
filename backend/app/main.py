@@ -170,6 +170,39 @@ async def api_info():
     }
 
 
+# Serve frontend static files (for production/HuggingFace deployment)
+import os
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+
+static_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "static")
+if os.path.exists(static_dir):
+    @app.get("/assets/{path:path}")
+    async def serve_assets(path: str):
+        file_path = os.path.join(static_dir, "assets", path)
+        if os.path.exists(file_path):
+            return FileResponse(file_path)
+        return JSONResponse(status_code=404, content={"detail": "Not found"})
+
+    @app.get("/{path:path}")
+    async def serve_spa(path: str):
+        # Don't serve for API routes
+        if path.startswith("api/") or path.startswith("docs") or path.startswith("redoc"):
+            return JSONResponse(status_code=404, content={"detail": "Not found"})
+
+        # Try to serve the file directly
+        file_path = os.path.join(static_dir, path)
+        if os.path.exists(file_path) and os.path.isfile(file_path):
+            return FileResponse(file_path)
+
+        # Fall back to index.html for SPA routing
+        index_path = os.path.join(static_dir, "index.html")
+        if os.path.exists(index_path):
+            return FileResponse(index_path)
+
+        return JSONResponse(status_code=404, content={"detail": "Not found"})
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(
