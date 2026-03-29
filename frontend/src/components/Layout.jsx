@@ -33,7 +33,10 @@ import {
   SlidersHorizontal,
   Calculator,
   FileText,
-  Scale
+  Scale,
+  Zap,
+  Search,
+  BarChart2
 } from 'lucide-react';
 
 const Layout = () => {
@@ -50,7 +53,16 @@ const Layout = () => {
 
   const navSections = [
     {
-      title: 'Overview',
+      title: 'Invest',
+      items: [
+        { path: '/top-picks', icon: Zap, label: 'Top Picks Today' },
+        { path: '/invest/analyze', icon: Search, label: 'Deep Analysis' },
+        { path: '/market-pulse', icon: BarChart2, label: 'Market Pulse' },
+        { path: '/profit-calc', icon: Calculator, label: 'Profit Calculator' },
+      ]
+    },
+    {
+      title: 'Portfolio',
       items: [
         { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
         { path: '/portfolio', icon: Briefcase, label: 'Portfolio' },

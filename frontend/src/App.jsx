@@ -24,6 +24,10 @@ import Leaderboard from './pages/Leaderboard';
 import Compare from './pages/Compare';
 import SharePortfolio from './pages/SharePortfolio';
 import FearGreed from './pages/FearGreed';
+import TopPicks from './pages/TopPicks';
+import DeepAnalysis from './pages/DeepAnalysis';
+import ProfitCalculator from './pages/ProfitCalculator';
+import MarketPulse from './pages/MarketPulse';
 import RiskAnalysis from './pages/RiskAnalysis';
 import Screener from './pages/Screener';
 import DCA from './pages/DCA';
@@ -114,6 +118,11 @@ function App() {
             <Route path="dca" element={<DCA />} />
             <Route path="tax-report" element={<TaxReport />} />
             <Route path="rebalance" element={<Rebalance />} />
+            <Route path="top-picks" element={<TopPicks />} />
+            <Route path="invest/analyze/:symbol" element={<DeepAnalysis />} />
+            <Route path="invest/analyze" element={<DeepAnalysis />} />
+            <Route path="profit-calc" element={<ProfitCalculator />} />
+            <Route path="market-pulse" element={<MarketPulse />} />
           </Route>
 
           {/* Catch all */}

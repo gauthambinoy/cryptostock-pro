@@ -173,6 +173,17 @@ export const toolsAPI = {
   rebalance: (portfolioId, strategy = 'equal_weight') => api.get(`/tools/rebalance/${portfolioId}?strategy=${strategy}`),
 };
 
+// Investment Analysis API
+export const investAPI = {
+  topPicks: (assetType = 'all', limit = 20) => api.get(`/invest/top-picks?asset_type=${assetType}&limit=${limit}`),
+  analyze: (symbol, assetType = 'stock') => api.get(`/invest/analyze/${symbol}?asset_type=${assetType}`),
+  profitCalc: (symbol, assetType, amount) => api.get(`/invest/profit-calc?symbol=${symbol}&asset_type=${assetType}&investment_amount=${amount}`),
+  marketPulse: () => api.get('/invest/market-pulse'),
+  compare: (symbols) => api.get(`/invest/compare?symbols=${symbols}`),
+  whenToBuy: (symbol, assetType = 'stock') => api.get(`/invest/when-to-buy/${symbol}?asset_type=${assetType}`),
+  whenToSell: (symbol, assetType = 'stock') => api.get(`/invest/when-to-sell/${symbol}?asset_type=${assetType}`),
+};
+
 // WebSocket connection for real-time updates
 export const createWebSocket = (onMessage) => {
   const wsUrl = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/api/market/ws`;
