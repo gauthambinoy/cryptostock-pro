@@ -19,7 +19,7 @@ yfinance==0.2.36
 aiohttp==3.9.3
 
 # Validation & Utils
-pydantic==2.5.3
+pydantic[email]==2.5.3
 pydantic-settings==2.1.0
 python-dotenv==1.0.1
 python-multipart==0.0.6
