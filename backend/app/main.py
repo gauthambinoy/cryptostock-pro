@@ -68,23 +68,41 @@ app = FastAPI(
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-# Configure CORS
+# Configure CORS (restricted methods and headers)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.allowed_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization"],
 )
+
+
+# Security headers middleware
+from starlette.middleware.base import BaseHTTPMiddleware
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+        return response
+
+app.add_middleware(SecurityHeadersMiddleware)
 
 
 # Global exception handler
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
-    """Handle uncaught exceptions"""
+    """Handle uncaught exceptions - don't expose internal details"""
+    import logging
+    logging.getLogger(__name__).error(f"Unhandled error: {exc}", exc_info=True)
     return JSONResponse(
         status_code=500,
-        content={"detail": "Internal server error", "type": type(exc).__name__}
+        content={"detail": "Internal server error"}
     )
 
 
@@ -176,27 +194,32 @@ import os
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
-static_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "static")
+static_dir = os.path.normpath(os.path.join(os.path.dirname(os.path.dirname(__file__)), "static"))
+
+def _safe_path(base: str, user_path: str):
+    """Prevent path traversal by ensuring resolved path is within base directory."""
+    resolved = os.path.normpath(os.path.join(base, user_path))
+    if not resolved.startswith(base):
+        return None
+    return resolved
+
 if os.path.exists(static_dir):
-    @app.get("/assets/{path:path}")
+    @app.get("/assets/{path:path}", include_in_schema=False)
     async def serve_assets(path: str):
-        file_path = os.path.join(static_dir, "assets", path)
-        if os.path.exists(file_path):
-            return FileResponse(file_path)
+        safe = _safe_path(os.path.join(static_dir, "assets"), path)
+        if safe and os.path.exists(safe) and os.path.isfile(safe):
+            return FileResponse(safe)
         return JSONResponse(status_code=404, content={"detail": "Not found"})
 
-    @app.get("/{path:path}")
+    @app.get("/{path:path}", include_in_schema=False)
     async def serve_spa(path: str):
-        # Don't serve for API routes
-        if path.startswith("api/") or path.startswith("docs") or path.startswith("redoc"):
+        if path.startswith("api/") or path in ("docs", "redoc", "openapi.json", "health"):
             return JSONResponse(status_code=404, content={"detail": "Not found"})
 
-        # Try to serve the file directly
-        file_path = os.path.join(static_dir, path)
-        if os.path.exists(file_path) and os.path.isfile(file_path):
-            return FileResponse(file_path)
+        safe = _safe_path(static_dir, path)
+        if safe and os.path.exists(safe) and os.path.isfile(safe):
+            return FileResponse(safe)
 
-        # Fall back to index.html for SPA routing
         index_path = os.path.join(static_dir, "index.html")
         if os.path.exists(index_path):
             return FileResponse(index_path)

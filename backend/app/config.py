@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     database_url: str = "postgresql://localhost/cryptostock_db"
     
     # Security
-    secret_key: str = "your-super-secret-key-change-this"
+    secret_key: str = ""  # MUST be set via SECRET_KEY env var
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
     
@@ -35,5 +35,13 @@ class Settings(BaseSettings):
 
 @lru_cache()
 def get_settings() -> Settings:
-    """Get cached settings instance"""
-    return Settings()
+    """Get cached settings instance. Auto-generates secret key if not set."""
+    settings = Settings()
+    if not settings.secret_key:
+        import secrets
+        import logging
+        settings.secret_key = secrets.token_urlsafe(64)
+        logging.getLogger(__name__).warning(
+            "SECRET_KEY not set! Generated a random key. Set SECRET_KEY env var for production."
+        )
+    return settings

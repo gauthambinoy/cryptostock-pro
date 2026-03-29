@@ -51,7 +51,7 @@ async def create_share(
     gain_loss = current_value - total_invested
     gain_loss_pct = (gain_loss / total_invested * 100) if total_invested > 0 else 0
 
-    share_id = str(uuid.uuid4())[:8]
+    share_id = str(uuid.uuid4())
     shared_portfolios[share_id] = {
         "portfolio_name": portfolio.name, "total_value": round(current_value, 2),
         "total_gain_loss": round(gain_loss, 2), "total_gain_loss_percent": round(gain_loss_pct, 2),
