@@ -1,7 +1,8 @@
 """
 Authentication API endpoints
 """
-from datetime import timedelta
+import uuid
+from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
@@ -126,3 +127,84 @@ async def change_password(
     db.commit()
     
     return {"message": "Password updated successfully"}
+
+
+@router.post("/guest", response_model=schemas.Token)
+async def guest_login(db: Session = Depends(get_db)):
+    """
+    Continue as guest - creates a temporary guest account with sample portfolio data.
+    """
+    guest_id = uuid.uuid4().hex[:8]
+    guest_email = f"guest_{guest_id}@cryptostock.guest"
+    guest_username = f"guest_{guest_id}"
+    guest_password = f"Guest_{uuid.uuid4().hex[:16]}!"
+
+    # Create guest user
+    hashed = auth.get_password_hash(guest_password)
+    guest_user = models.User(
+        email=guest_email,
+        username=guest_username,
+        hashed_password=hashed,
+        full_name=f"Guest User",
+        is_active=True,
+    )
+    db.add(guest_user)
+    db.commit()
+    db.refresh(guest_user)
+
+    # Create default portfolio with sample holdings
+    portfolio = models.Portfolio(name="Sample Portfolio", user_id=guest_user.id)
+    db.add(portfolio)
+    db.commit()
+    db.refresh(portfolio)
+
+    # Add sample holdings
+    sample_holdings = [
+        {"symbol": "AAPL", "name": "Apple Inc.", "asset_type": "stock", "quantity": 10, "buy_price": 175.0},
+        {"symbol": "GOOGL", "name": "Alphabet Inc.", "asset_type": "stock", "quantity": 5, "buy_price": 140.0},
+        {"symbol": "MSFT", "name": "Microsoft Corp.", "asset_type": "stock", "quantity": 8, "buy_price": 380.0},
+        {"symbol": "BTC", "name": "Bitcoin", "asset_type": "crypto", "quantity": 0.5, "buy_price": 42000.0},
+        {"symbol": "ETH", "name": "Ethereum", "asset_type": "crypto", "quantity": 5, "buy_price": 2200.0},
+        {"symbol": "TSLA", "name": "Tesla Inc.", "asset_type": "stock", "quantity": 12, "buy_price": 195.0},
+        {"symbol": "NVDA", "name": "NVIDIA Corp.", "asset_type": "stock", "quantity": 6, "buy_price": 480.0},
+        {"symbol": "SOL", "name": "Solana", "asset_type": "crypto", "quantity": 50, "buy_price": 95.0},
+    ]
+
+    for h in sample_holdings:
+        holding = models.Holding(
+            portfolio_id=portfolio.id,
+            symbol=h["symbol"],
+            name=h["name"],
+            asset_type=models.AssetType(h["asset_type"]),
+            quantity=h["quantity"],
+            buy_price=h["buy_price"],
+            buy_date=datetime.utcnow() - timedelta(days=90),
+        )
+        db.add(holding)
+
+    # Add sample goals
+    goal = models.Goal(
+        user_id=guest_user.id,
+        name="Reach $50,000 Portfolio",
+        target_amount=50000,
+        current_amount=35000,
+    )
+    db.add(goal)
+
+    # Add sample watchlist
+    for sym, atype in [("AMZN", "stock"), ("XRP", "crypto"), ("META", "stock"), ("ADA", "crypto")]:
+        db.add(models.WatchlistItem(
+            user_id=guest_user.id,
+            symbol=sym,
+            asset_type=models.AssetType(atype),
+        ))
+
+    db.commit()
+
+    # Generate token
+    access_token = auth.create_access_token(
+        data={"sub": str(guest_user.id)},
+        expires_delta=timedelta(hours=24),
+    )
+
+    return {"access_token": access_token, "token_type": "bearer"}
