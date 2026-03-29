@@ -38,6 +38,23 @@ export const useAuthStore = create((set, get) => ({
     }
   },
   
+  guestLogin: async () => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await authAPI.guest();
+      const { access_token } = response.data;
+      localStorage.setItem('token', access_token);
+      set({ token: access_token });
+      await get().fetchUser();
+      return true;
+    } catch (error) {
+      set({ error: error.response?.data?.detail || 'Guest login failed' });
+      return false;
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
   logout: () => {
     localStorage.removeItem('token');
     set({ user: null, token: null });
