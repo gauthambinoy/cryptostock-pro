@@ -183,8 +183,8 @@ async def api_info():
 
 # Serve frontend static files (for production/HuggingFace deployment)
 import os
-from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 static_dir = os.path.normpath(os.path.join(os.path.dirname(os.path.dirname(__file__)), "static"))
 
@@ -196,22 +196,25 @@ def _safe_path(base: str, user_path: str):
     return resolved
 
 if os.path.exists(static_dir):
-    @app.get("/assets/{path:path}", include_in_schema=False)
-    async def serve_assets(path: str):
-        safe = _safe_path(os.path.join(static_dir, "assets"), path)
-        if safe and os.path.exists(safe) and os.path.isfile(safe):
-            return FileResponse(safe)
-        return JSONResponse(status_code=404, content={"detail": "Not found"})
+    from fastapi.staticfiles import StaticFiles
+    # Mount static assets directory directly - this is the correct way
+    app.mount("/assets", StaticFiles(directory=os.path.join(static_dir, "assets")), name="static-assets")
 
-    @app.get("/{path:path}", include_in_schema=False)
-    async def serve_spa(path: str):
-        if path.startswith("api/") or path in ("docs", "redoc", "openapi.json", "health"):
+    # Override 404 handler to serve index.html for SPA routes (not API routes)
+    @app.exception_handler(404)
+    async def spa_fallback(request, exc):
+        path = request.url.path
+        # Don't intercept API routes, docs, health check
+        if path.startswith("/api") or path.startswith("/docs") or path.startswith("/redoc") or path == "/openapi.json" or path == "/health":
             return JSONResponse(status_code=404, content={"detail": "Not found"})
 
-        safe = _safe_path(static_dir, path)
-        if safe and os.path.exists(safe) and os.path.isfile(safe):
-            return FileResponse(safe)
+        # Try serving the exact file
+        if path != "/":
+            safe = _safe_path(static_dir, path.lstrip("/"))
+            if safe and os.path.exists(safe) and os.path.isfile(safe):
+                return FileResponse(safe)
 
+        # Fallback to index.html for SPA client-side routing
         index_path = os.path.join(static_dir, "index.html")
         if os.path.exists(index_path):
             return FileResponse(index_path)
