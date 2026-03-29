@@ -126,16 +126,8 @@ app.include_router(export.router)
 app.include_router(tools.router)
 
 
-# Health check endpoint
-@app.get("/", tags=["Health"])
-async def root():
-    """API health check"""
-    return {
-        "name": "CryptoStock Pro API",
-        "version": "1.0.0",
-        "status": "healthy",
-        "docs": "/docs"
-    }
+# Health check endpoint (use /health, not / so SPA serves at root)
+# Root "/" is handled by the SPA catch-all to serve the frontend
 
 
 @app.get("/health", tags=["Health"])
