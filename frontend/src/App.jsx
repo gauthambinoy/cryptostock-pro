@@ -34,6 +34,8 @@ import Screener from './pages/Screener';
 import DCA from './pages/DCA';
 import TaxReport from './pages/TaxReport';
 import Rebalance from './pages/Rebalance';
+import Backtester from './pages/Backtester';
+import UserProfile from './pages/UserProfile';
 
 // Components
 import Layout from './components/Layout';
@@ -128,6 +130,7 @@ function App() {
             <Route path="prediction" element={<Prediction />} />
             <Route path="converter" element={<Converter />} />
             <Route path="leaderboard" element={<Leaderboard />} />
+            <Route path="leaderboard/:userId" element={<UserProfile />} />
             <Route path="compare" element={<Compare />} />
             <Route path="share" element={<SharePortfolio />} />
             <Route path="fear-greed" element={<FearGreed />} />
@@ -136,6 +139,7 @@ function App() {
             <Route path="dca" element={<DCA />} />
             <Route path="tax-report" element={<TaxReport />} />
             <Route path="rebalance" element={<Rebalance />} />
+            <Route path="backtester" element={<Backtester />} />
             <Route path="top-picks" element={<TopPicks />} />
             <Route path="invest/analyze/:symbol" element={<DeepAnalysis />} />
             <Route path="invest/analyze" element={<DeepAnalysis />} />

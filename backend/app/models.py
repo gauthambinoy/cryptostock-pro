@@ -24,17 +24,19 @@ class AssetType(str, enum.Enum):
 class User(Base):
     """User account model"""
     __tablename__ = "users"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String(255), unique=True, index=True, nullable=False)
     username = Column(String(100), unique=True, index=True, nullable=False)
     hashed_password = Column(String(255), nullable=False)
     full_name = Column(String(255))
+    phone_number = Column(String(20), nullable=True)
     is_active = Column(Boolean, default=True)
     is_verified = Column(Boolean, default=False)
+    is_premium = Column(Boolean, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
-    
+
     # Relationships
     portfolios = relationship("Portfolio", back_populates="owner", cascade="all, delete-orphan")
     alerts = relationship("Alert", back_populates="owner", cascade="all, delete-orphan")
@@ -102,6 +104,12 @@ class Alert(Base):
     is_active = Column(Boolean, default=True)
     is_triggered = Column(Boolean, default=False)
     triggered_at = Column(DateTime(timezone=True))
+
+    # Notification preferences
+    notify_email = Column(Boolean, default=True)
+    notify_sms = Column(Boolean, default=False)
+    frequency = Column(String(20), default="immediately")  # immediately, daily, weekly, never
+
     is_deleted = Column(Boolean, default=False, index=True)
     deleted_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -204,3 +212,151 @@ class UserPreference(Base):
     currency = Column(String(10), default="USD")
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+
+class UserStats(Base):
+    """User statistics for leaderboard ranking"""
+    __tablename__ = "user_stats"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
+
+    # Prediction accuracy metrics
+    accuracy_percentage = Column(Float, default=0.0)
+    total_predictions = Column(Integer, default=0)
+    correct_predictions = Column(Integer, default=0)
+
+    # Trading metrics
+    best_trade_return = Column(Float, default=0.0)
+    total_trades = Column(Integer, default=0)
+    win_rate = Column(Float, default=0.0)
+
+    # Rankings
+    rank_monthly = Column(Integer)
+    rank_yearly = Column(Integer)
+    rank_all_time = Column(Integer)
+
+    # Timestamps
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relationships
+    user = relationship("User", backref="stats")
+
+    # Composite indexes for ranking queries
+    __table_args__ = (
+        Index('ix_user_accuracy', 'accuracy_percentage'),
+        Index('ix_user_rank_monthly', 'rank_monthly'),
+        Index('ix_user_rank_yearly', 'rank_yearly'),
+    )
+
+
+class Badge(Base):
+    """Badge definitions for achievements"""
+    __tablename__ = "badges"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(100), unique=True, nullable=False)
+    description = Column(String(255))
+    criteria = Column(String(500), nullable=False)  # JSON describing how to earn
+    icon_url = Column(String(500))
+    rarity = Column(String(20), default="common")  # common, uncommon, rare, epic, legendary
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relationships
+    user_badges = relationship("UserBadge", back_populates="badge", cascade="all, delete-orphan")
+
+
+class UserBadge(Base):
+    """User badges earned"""
+    __tablename__ = "user_badges"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    badge_id = Column(Integer, ForeignKey("badges.id", ondelete="CASCADE"), nullable=False)
+    earned_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relationships
+    user = relationship("User", backref="earned_badges")
+    badge = relationship("Badge", back_populates="user_badges")
+
+    # Composite index for efficient lookups
+    __table_args__ = (
+        Index('ix_user_badge', 'user_id', 'badge_id'),
+    )
+
+
+class UserFollow(Base):
+    """User following relationships"""
+    __tablename__ = "user_follows"
+
+    id = Column(Integer, primary_key=True, index=True)
+    follower_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    following_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Composite index for efficient lookups
+    __table_args__ = (
+        Index('ix_follower_following', 'follower_id', 'following_id'),
+    )
+
+
+class Backtest(Base):
+    """Backtest results and metadata"""
+    __tablename__ = "backtests"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    symbol = Column(String(20), nullable=False, index=True)
+    asset_type = Column(Enum(AssetType), nullable=False)
+    start_date = Column(DateTime(timezone=True), nullable=False)
+    end_date = Column(DateTime(timezone=True), nullable=False)
+    strategy = Column(String(50), nullable=False, default="buy_and_hold")
+
+    # Performance metrics
+    total_return_percent = Column(Float, nullable=False)
+    annual_return_percent = Column(Float, nullable=False)
+    sharpe_ratio = Column(Float, nullable=False)
+    max_drawdown_percent = Column(Float, nullable=False)
+    win_rate_percent = Column(Float, nullable=False)
+    total_trades = Column(Integer, default=0)
+
+    # Benchmark comparison
+    benchmark_symbol = Column(String(20), default="SPY")
+    benchmark_return_percent = Column(Float, nullable=True)
+    outperformance_percent = Column(Float, nullable=True)
+
+    # Results data (JSON)
+    equity_curve = Column(String, nullable=True)  # JSON array
+    trades = Column(String, nullable=True)  # JSON array
+    monthly_returns = Column(String, nullable=True)  # JSON object
+    monte_carlo_stats = Column(String, nullable=True)  # JSON object
+
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    __table_args__ = (
+        Index('ix_user_symbol_backtest', 'user_id', 'symbol'),
+    )
+
+
+class HistoricalPrice(Base):
+    """Cached historical price data"""
+    __tablename__ = "historical_prices"
+
+    id = Column(Integer, primary_key=True, index=True)
+    symbol = Column(String(20), nullable=False, index=True)
+    asset_type = Column(Enum(AssetType), nullable=False)
+    date = Column(DateTime(timezone=True), nullable=False)
+    open = Column(Float, nullable=False)
+    high = Column(Float, nullable=False)
+    low = Column(Float, nullable=False)
+    close = Column(Float, nullable=False)
+    volume = Column(Float, nullable=False)
+
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    __table_args__ = (
+        Index('ix_symbol_date', 'symbol', 'date'),
+    )
