@@ -2,9 +2,12 @@
 Pydantic schemas for request/response validation
 """
 from pydantic import BaseModel, EmailStr, Field
-from typing import Optional, List
+from typing import Optional, List, Generic, TypeVar
 from datetime import datetime
 from enum import Enum
+
+# Generic type for pagination
+T = TypeVar('T')
 
 
 # ============== Enums ==============
@@ -18,6 +21,22 @@ class AlertType(str, Enum):
     PRICE_ABOVE = "price_above"
     PRICE_BELOW = "price_below"
     PERCENT_CHANGE = "percent_change"
+
+
+# ============== Pagination ==============
+
+class PaginationParams(BaseModel):
+    """Pagination parameters"""
+    limit: int = Field(default=20, ge=1, le=100)
+    offset: int = Field(default=0, ge=0)
+
+
+class PaginatedResponse(BaseModel, Generic[T]):
+    """Generic paginated response wrapper"""
+    total: int
+    limit: int
+    offset: int
+    items: List[T]
 
 
 # ============== Auth Schemas ==============

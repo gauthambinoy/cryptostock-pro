@@ -3,7 +3,7 @@ Authentication API endpoints
 """
 import uuid
 from datetime import datetime, timedelta
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Response
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from ..database import get_db
@@ -28,52 +28,81 @@ async def register(user_data: schemas.UserCreate, db: Session = Depends(get_db))
     return user
 
 
-@router.post("/login", response_model=schemas.Token)
-async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+@router.post("/login")
+async def login(response: Response, form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     """
-    Login and get access token
-    
+    Login and get access token via httpOnly cookie
+
     Use email as username field
     """
     user = auth.authenticate_user(db, form_data.username, form_data.password)
-    
+
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
     access_token_expires = timedelta(minutes=settings.access_token_expire_minutes)
     access_token = auth.create_access_token(
         data={"sub": str(user.id)},
         expires_delta=access_token_expires
     )
-    
-    return {"access_token": access_token, "token_type": "bearer"}
+
+    # Set httpOnly cookie with token
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        max_age=settings.access_token_expire_minutes * 60,
+        httponly=True,
+        secure=True,
+        samesite="lax"
+    )
+
+    return {"message": "Login successful"}
 
 
-@router.post("/login/json", response_model=schemas.Token)
-async def login_json(credentials: schemas.UserLogin, db: Session = Depends(get_db)):
+@router.post("/login/json")
+async def login_json(response: Response, credentials: schemas.UserLogin, db: Session = Depends(get_db)):
     """
-    Login with JSON body (alternative to form data)
+    Login with JSON body via httpOnly cookie
     """
     user = auth.authenticate_user(db, credentials.email, credentials.password)
-    
+
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
     access_token_expires = timedelta(minutes=settings.access_token_expire_minutes)
     access_token = auth.create_access_token(
         data={"sub": str(user.id)},
         expires_delta=access_token_expires
     )
-    
-    return {"access_token": access_token, "token_type": "bearer"}
+
+    # Set httpOnly cookie with token
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        max_age=settings.access_token_expire_minutes * 60,
+        httponly=True,
+        secure=True,
+        samesite="lax"
+    )
+
+    return {"message": "Login successful"}
+
+
+@router.post("/logout")
+async def logout(response: Response):
+    """
+    Logout user - clears authentication cookie
+    """
+    response.delete_cookie("access_token", secure=True, samesite="lax")
+    return {"message": "Logout successful"}
 
 
 @router.get("/me", response_model=schemas.UserResponse)
@@ -129,8 +158,8 @@ async def change_password(
     return {"message": "Password updated successfully"}
 
 
-@router.post("/guest", response_model=schemas.Token)
-async def guest_login(db: Session = Depends(get_db)):
+@router.post("/guest")
+async def guest_login(response: Response, db: Session = Depends(get_db)):
     """
     Continue as guest - creates a temporary guest account with sample portfolio data.
     """
@@ -207,4 +236,14 @@ async def guest_login(db: Session = Depends(get_db)):
         expires_delta=timedelta(hours=24),
     )
 
-    return {"access_token": access_token, "token_type": "bearer"}
+    # Set httpOnly cookie with token
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        max_age=24 * 60 * 60,  # 24 hours
+        httponly=True,
+        secure=True,
+        samesite="lax"
+    )
+
+    return {"message": "Guest login successful"}
