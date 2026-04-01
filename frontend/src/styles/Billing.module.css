@@ -1,0 +1,540 @@
+.billingContainer {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 40px 20px;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 50px;
+}
+
+.header h1 {
+  font-size: 40px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 12px;
+  text-shadow: 0 2px 10px rgba(255, 255, 255, 0.1);
+}
+
+.header p {
+  font-size: 16px;
+  color: #a0aec0;
+  margin: 0;
+}
+
+/* Current Plan Section */
+.currentPlanSection {
+  margin-bottom: 50px;
+}
+
+.planCard {
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.1) 100%);
+  border: 2px solid rgba(102, 126, 234, 0.5);
+  border-radius: 12px;
+  padding: 32px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 32px;
+}
+
+.planInfo {
+  flex: 1;
+}
+
+.planInfo h2 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #a0aec0;
+  margin: 0 0 16px 0;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.planDetails {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.planName {
+  font-size: 32px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.planStatus {
+  font-size: 16px;
+  color: #cbd5e0;
+}
+
+.active {
+  color: #48bb78;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.renewalDate {
+  font-size: 14px;
+  color: #a0aec0;
+}
+
+.actions {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.upgradeButton,
+.cancelButton {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+
+.upgradeButton {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.upgradeButton:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+}
+
+.cancelButton {
+  background: rgba(245, 101, 101, 0.1);
+  color: #f56565;
+  border: 1px solid rgba(245, 101, 101, 0.3);
+}
+
+.cancelButton:hover {
+  background: rgba(245, 101, 101, 0.15);
+  border-color: rgba(245, 101, 101, 0.5);
+}
+
+/* Usage Section */
+.usageSection {
+  margin-bottom: 50px;
+}
+
+.usageSection h2 {
+  font-size: 24px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 24px;
+}
+
+.metricsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.metricCard {
+  background: linear-gradient(135deg, rgba(26, 32, 44, 0.8) 0%, rgba(45, 55, 72, 0.6) 100%);
+  border: 1px solid rgba(102, 126, 234, 0.2);
+  border-radius: 12px;
+  padding: 24px;
+  backdrop-filter: blur(10px);
+}
+
+.metricHeader {
+  margin-bottom: 16px;
+}
+
+.metricHeader h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #cbd5e0;
+  margin: 0;
+}
+
+.metricContent {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.metricValue {
+  font-size: 28px;
+  font-weight: 700;
+  color: #667eea;
+}
+
+.progressBar {
+  height: 8px;
+  background: rgba(102, 126, 234, 0.1);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress {
+  height: 100%;
+  background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.metricPercent {
+  font-size: 12px;
+  color: #a0aec0;
+}
+
+/* Payment History Section */
+.paymentHistorySection {
+  margin-bottom: 40px;
+}
+
+.paymentHistorySection h2 {
+  font-size: 24px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 24px;
+}
+
+.paymentTable {
+  background: linear-gradient(135deg, rgba(26, 32, 44, 0.6) 0%, rgba(45, 55, 72, 0.4) 100%);
+  border: 1px solid rgba(102, 126, 234, 0.2);
+  border-radius: 12px;
+  overflow: hidden;
+  backdrop-filter: blur(10px);
+}
+
+.tableHeader {
+  display: grid;
+  grid-template-columns: 120px 1fr 120px 100px 150px;
+  gap: 20px;
+  background: rgba(102, 126, 234, 0.1);
+  padding: 20px;
+  border-bottom: 1px solid rgba(102, 126, 234, 0.2);
+  font-weight: 600;
+  color: #667eea;
+  font-size: 14px;
+}
+
+.dateCol,
+.descCol,
+.amountCol,
+.statusCol,
+.actionCol {
+  display: flex;
+  align-items: center;
+}
+
+.tableRow {
+  display: grid;
+  grid-template-columns: 120px 1fr 120px 100px 150px;
+  gap: 20px;
+  padding: 20px;
+  border-bottom: 1px solid rgba(102, 126, 234, 0.1);
+  align-items: center;
+  color: #cbd5e0;
+}
+
+.tableRow:last-child {
+  border-bottom: none;
+}
+
+.dateCol {
+  font-size: 14px;
+  color: #a0aec0;
+}
+
+.descCol {
+  color: #cbd5e0;
+}
+
+.amountCol {
+  font-weight: 600;
+  color: #667eea;
+}
+
+.statusCol {
+  text-align: center;
+}
+
+.badge {
+  display: inline-block;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: capitalize;
+  background: rgba(102, 126, 234, 0.1);
+  color: #667eea;
+}
+
+.badge.succeeded {
+  background: rgba(72, 187, 120, 0.1);
+  color: #48bb78;
+}
+
+.badge.failed {
+  background: rgba(245, 101, 101, 0.1);
+  color: #f56565;
+}
+
+.badge.pending {
+  background: rgba(237, 137, 54, 0.1);
+  color: #ed8936;
+}
+
+.actionCol {
+  text-align: right;
+}
+
+.link {
+  color: #667eea;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 600;
+  transition: color 0.3s ease;
+}
+
+.link:hover {
+  color: #764ba2;
+  text-decoration: underline;
+}
+
+.emptyState {
+  padding: 60px 20px;
+  text-align: center;
+}
+
+.emptyState p {
+  color: #a0aec0;
+  font-size: 16px;
+  margin: 0;
+}
+
+/* Modal */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+}
+
+.modalContent {
+  background: linear-gradient(135deg, rgba(26, 32, 44, 0.95) 0%, rgba(45, 55, 72, 0.95) 100%);
+  border: 1px solid rgba(102, 126, 234, 0.3);
+  border-radius: 12px;
+  padding: 40px;
+  max-width: 500px;
+  width: 90%;
+  backdrop-filter: blur(10px);
+}
+
+.modalContent h2 {
+  font-size: 24px;
+  font-weight: 700;
+  color: #fff;
+  margin: 0 0 16px 0;
+}
+
+.modalContent p {
+  color: #cbd5e0;
+  margin: 0 0 16px 0;
+  line-height: 1.6;
+}
+
+.warning {
+  background: rgba(245, 101, 101, 0.1);
+  border-left: 4px solid #f56565;
+  padding: 12px;
+  border-radius: 4px;
+  color: #f56565;
+  margin: 16px 0;
+}
+
+.reasonInput {
+  margin: 20px 0;
+}
+
+.reasonInput label {
+  display: block;
+  color: #cbd5e0;
+  font-weight: 500;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+.reasonInput select {
+  width: 100%;
+  padding: 10px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(102, 126, 234, 0.3);
+  border-radius: 6px;
+  color: #fff;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.reasonInput select:focus {
+  outline: none;
+  border-color: rgba(102, 126, 234, 0.7);
+  background: rgba(102, 126, 234, 0.1);
+}
+
+.reasonInput select option {
+  background: #1a202c;
+  color: #fff;
+}
+
+.billingOptions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 20px 0;
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: rgba(102, 126, 234, 0.05);
+  border: 1px solid rgba(102, 126, 234, 0.2);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.option:hover {
+  background: rgba(102, 126, 234, 0.1);
+  border-color: rgba(102, 126, 234, 0.4);
+}
+
+.option input[type='radio'] {
+  cursor: pointer;
+  accent-color: #667eea;
+}
+
+.option span {
+  color: #cbd5e0;
+  flex: 1;
+}
+
+.option input[type='radio']:checked + span {
+  color: #667eea;
+  font-weight: 600;
+}
+
+.modalActions {
+  display: flex;
+  gap: 16px;
+  margin-top: 32px;
+}
+
+.modalActions button {
+  flex: 1;
+  padding: 12px 24px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.cancelBtn {
+  background: rgba(102, 126, 234, 0.1);
+  color: #667eea;
+  border: 1px solid rgba(102, 126, 234, 0.3);
+}
+
+.cancelBtn:hover {
+  background: rgba(102, 126, 234, 0.15);
+  border-color: rgba(102, 126, 234, 0.5);
+}
+
+.confirmBtn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.confirmBtn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+}
+
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 400px;
+  font-size: 18px;
+  color: #a0aec0;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .billingContainer {
+    padding: 24px 16px;
+  }
+
+  .header h1 {
+    font-size: 28px;
+  }
+
+  .planCard {
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .actions {
+    width: 100%;
+  }
+
+  .upgradeButton,
+  .cancelButton {
+    flex: 1;
+    min-width: 150px;
+  }
+
+  .metricsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .tableHeader,
+  .tableRow {
+    grid-template-columns: 100px 1fr 80px;
+    gap: 12px;
+    padding: 16px;
+  }
+
+  .amountCol,
+  .statusCol,
+  .actionCol {
+    display: none;
+  }
+
+  .tableHeader > :nth-child(4),
+  .tableHeader > :nth-child(5),
+  .tableRow > :nth-child(4),
+  .tableRow > :nth-child(5) {
+    display: none;
+  }
+
+  .modalContent {
+    padding: 24px;
+  }
+
+  .modalActions {
+    flex-direction: column;
+  }
+}
