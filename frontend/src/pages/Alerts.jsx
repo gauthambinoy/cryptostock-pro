@@ -55,64 +55,80 @@ const Alerts = () => {
         {alerts.length > 0 ? (
           <div className="divide-y divide-white/5">
             {alerts.map((alert) => (
-              <div 
+              <div
                 key={alert.id}
-                className={`p-4 flex items-center justify-between hover:bg-white/5 transition-colors ${
+                className={`p-4 hover:bg-white/5 transition-colors ${
                   alert.is_triggered ? 'opacity-60' : ''
                 }`}
               >
-                <div className="flex items-center gap-4">
-                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold
-                    ${alert.asset_type === 'crypto' 
-                      ? 'bg-gradient-to-br from-orange-500 to-yellow-500' 
-                      : 'bg-gradient-to-br from-primary-500 to-blue-500'
-                    }`}
-                  >
-                    {alert.symbol.slice(0, 2)}
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <p className="font-semibold">{alert.symbol}</p>
-                      {alert.is_triggered && (
-                        <span className="flex items-center gap-1 px-2 py-0.5 bg-success-500/20 text-success-400 rounded text-xs">
-                          <CheckCircle className="w-3 h-3" />
-                          Triggered
-                        </span>
-                      )}
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-4">
+                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold
+                      ${alert.asset_type === 'crypto'
+                        ? 'bg-gradient-to-br from-orange-500 to-yellow-500'
+                        : 'bg-gradient-to-br from-primary-500 to-blue-500'
+                      }`}
+                    >
+                      {alert.symbol.slice(0, 2)}
                     </div>
-                    <div className="flex items-center gap-2 text-sm text-gray-400">
-                      {alert.alert_type === 'price_above' && (
-                        <>
-                          <TrendingUp className="w-4 h-4 text-success-400" />
-                          <span>Alert when price goes above</span>
-                        </>
-                      )}
-                      {alert.alert_type === 'price_below' && (
-                        <>
-                          <TrendingDown className="w-4 h-4 text-danger-400" />
-                          <span>Alert when price goes below</span>
-                        </>
-                      )}
-                      <span className="font-medium text-white">{formatCurrency(alert.target_value)}</span>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <p className="font-semibold">{alert.symbol}</p>
+                        {alert.is_triggered && (
+                          <span className="flex items-center gap-1 px-2 py-0.5 bg-success-500/20 text-success-400 rounded text-xs">
+                            <CheckCircle className="w-3 h-3" />
+                            Triggered
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-gray-400">
+                        {alert.alert_type === 'price_above' && (
+                          <>
+                            <TrendingUp className="w-4 h-4 text-success-400" />
+                            <span>Alert when price goes above</span>
+                          </>
+                        )}
+                        {alert.alert_type === 'price_below' && (
+                          <>
+                            <TrendingDown className="w-4 h-4 text-danger-400" />
+                            <span>Alert when price goes below</span>
+                          </>
+                        )}
+                        <span className="font-medium text-white">{formatCurrency(alert.target_value)}</span>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div className="flex items-center gap-4">
-                  <div className="text-right">
-                    <p className="text-sm text-gray-400">Current Price</p>
-                    <p className="font-medium">{alert.current_price ? formatCurrency(alert.current_price) : '-'}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm text-gray-400">Created</p>
-                    <p className="text-sm">{formatDateTime(alert.created_at)}</p>
-                  </div>
                   <button
                     onClick={() => handleDeleteAlert(alert.id)}
                     className="p-2 text-gray-400 hover:text-danger-400 hover:bg-danger-500/20 rounded-lg transition-colors"
                   >
                     <Trash2 className="w-5 h-5" />
                   </button>
+                </div>
+
+                {/* Alert Details Row */}
+                <div className="ml-16 flex items-center gap-6 text-sm text-gray-400">
+                  <div>
+                    <p className="text-xs text-gray-500">Current Price</p>
+                    <p className="text-white font-medium">{alert.current_price ? formatCurrency(alert.current_price) : '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Created</p>
+                    <p className="text-white">{formatDateTime(alert.created_at)}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {alert.notify_email && (
+                      <span className="px-2 py-1 bg-blue-500/20 text-blue-400 rounded text-xs">📧 Email</span>
+                    )}
+                    {alert.notify_sms && (
+                      <span className="px-2 py-1 bg-purple-500/20 text-purple-400 rounded text-xs">📱 SMS</span>
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Frequency</p>
+                    <p className="text-white capitalize">{alert.frequency}</p>
+                  </div>
                 </div>
               </div>
             ))}
@@ -122,7 +138,7 @@ const Alerts = () => {
             <Bell className="w-12 h-12 text-gray-600 mx-auto mb-4" />
             <h3 className="text-lg font-medium mb-2">No alerts yet</h3>
             <p className="text-gray-400 mb-4">Create your first price alert to get notified</p>
-            <button 
+            <button
               onClick={() => setShowModal(true)}
               className="btn-primary"
             >
@@ -154,7 +170,10 @@ const CreateAlertModal = ({ onClose, onCreate }) => {
     symbol: '',
     asset_type: 'stock',
     alert_type: 'price_above',
-    target_value: ''
+    target_value: '',
+    notify_email: true,
+    notify_sms: false,
+    frequency: 'immediately'
   });
   const [currentPrice, setCurrentPrice] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -306,6 +325,55 @@ const CreateAlertModal = ({ onClose, onCreate }) => {
               placeholder="0.00"
               className="input-field"
             />
+          </div>
+
+          {/* Notification Settings */}
+          <div className="border-t border-white/10 pt-4 space-y-4">
+            <h3 className="text-sm font-semibold text-gray-300">Notifications</h3>
+
+            {/* Email Notification */}
+            <div className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                id="notify_email"
+                checked={formData.notify_email}
+                onChange={(e) => setFormData({ ...formData, notify_email: e.target.checked })}
+                className="w-4 h-4 rounded border-white/20 text-primary-500 cursor-pointer"
+              />
+              <label htmlFor="notify_email" className="text-sm text-gray-400 cursor-pointer flex-1">
+                Email notifications
+              </label>
+            </div>
+
+            {/* SMS Notification */}
+            <div className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                id="notify_sms"
+                checked={formData.notify_sms}
+                onChange={(e) => setFormData({ ...formData, notify_sms: e.target.checked })}
+                className="w-4 h-4 rounded border-white/20 text-primary-500 cursor-pointer"
+                title="SMS alerts available for premium users"
+              />
+              <label htmlFor="notify_sms" className="text-sm text-gray-400 cursor-pointer flex-1">
+                SMS alerts (Premium)
+              </label>
+            </div>
+
+            {/* Frequency */}
+            <div>
+              <label className="block text-sm text-gray-400 mb-2">Frequency</label>
+              <select
+                value={formData.frequency}
+                onChange={(e) => setFormData({ ...formData, frequency: e.target.value })}
+                className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm"
+              >
+                <option value="immediately">Immediately</option>
+                <option value="daily">Daily Digest</option>
+                <option value="weekly">Weekly Digest</option>
+                <option value="never">Never</option>
+              </select>
+            </div>
           </div>
 
           {error && (
