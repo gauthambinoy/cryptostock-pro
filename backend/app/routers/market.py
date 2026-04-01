@@ -1,12 +1,15 @@
 """
 Market data API endpoints
 """
-from typing import List, Optional
+import asyncio
+import json
+import logging
+from typing import List, Optional, Dict
 from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
 from .. import schemas, auth, models
 from ..services.market_data import get_market_service
-import asyncio
-import json
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/market", tags=["Market Data"])
 
@@ -213,13 +216,15 @@ async def websocket_endpoint(websocket: WebSocket):
             # Send price updates for subscribed symbols
             symbols = manager.subscriptions.get(websocket, [])
             if symbols:
+                # Build symbol dict for batch fetching (try as crypto first)
+                symbol_dict: Dict[str, str] = {s: "CRYPTO" for s in symbols}
+
+                # Batch fetch all quotes concurrently
+                quotes = await market_service.batch_fetch_quotes(symbol_dict)
+
                 updates = []
                 for symbol in symbols:
-                    # Try crypto first, then stock
-                    quote = await market_service.get_crypto_quote(symbol)
-                    if not quote:
-                        quote = market_service.get_stock_quote(symbol)
-                    
+                    quote = quotes.get(symbol)
                     if quote:
                         updates.append({
                             "symbol": quote.symbol,
@@ -228,18 +233,18 @@ async def websocket_endpoint(websocket: WebSocket):
                             "change_percent": quote.change_percent,
                             "asset_type": quote.asset_type.value
                         })
-                
+
                 if updates:
                     await manager.send_personal_message(
                         json.dumps({"type": "prices", "data": updates}),
                         websocket
                     )
-            
+
             # Wait before next update cycle
             await asyncio.sleep(5)
-            
+
     except WebSocketDisconnect:
         manager.disconnect(websocket)
     except Exception as e:
-        print(f"WebSocket error: {e}")
+        logger.error(f"WebSocket error: {e}")
         manager.disconnect(websocket)

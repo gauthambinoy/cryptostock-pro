@@ -1,0 +1,30 @@
+{
+  "version": 2,
+  "buildCommand": "cd backend && pip install -r requirements.txt && cd ../frontend && npm install && npm run build",
+  "outputDirectory": "frontend/dist",
+  "env": {
+    "DATABASE_URL": "@database_url",
+    "REDIS_URL": "@redis_url",
+    "JWT_SECRET_KEY": "@jwt_secret",
+    "NEWSAPI_KEY": "@newsapi_key",
+    "FRED_API_KEY": "@fred_api_key",
+    "REDDIT_CLIENT_ID": "@reddit_client_id",
+    "REDDIT_CLIENT_SECRET": "@reddit_client_secret",
+    "TWITTER_BEARER_TOKEN": "@twitter_bearer_token"
+  },
+  "functions": {
+    "backend/app/main.py": {
+      "runtime": "python3.11"
+    }
+  },
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/backend/app/main.py"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/frontend/dist/index.html"
+    }
+  ]
+}

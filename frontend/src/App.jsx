@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './utils/store';
 import { ThemeProvider } from './components/ThemeProvider';
+import ErrorBoundary from './components/ErrorBoundary';
 
 // Pages
 import Login from './pages/Login';
@@ -41,15 +42,17 @@ import OnboardingTour from './components/OnboardingTour';
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
-  const { token, user, fetchUser } = useAuthStore();
+  const { isAuthenticated, isInitialized } = useAuthStore();
 
-  useEffect(() => {
-    if (token && !user) {
-      fetchUser();
-    }
-  }, [token, user, fetchUser]);
+  if (!isInitialized) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
 
-  if (!token) {
+  if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
 
@@ -58,9 +61,17 @@ const ProtectedRoute = ({ children }) => {
 
 // Public Route Component (redirects to dashboard if logged in)
 const PublicRoute = ({ children }) => {
-  const { token } = useAuthStore();
+  const { isAuthenticated, isInitialized } = useAuthStore();
 
-  if (token) {
+  if (!isInitialized) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
+  if (isAuthenticated) {
     return <Navigate to="/dashboard" replace />;
   }
 
@@ -68,10 +79,17 @@ const PublicRoute = ({ children }) => {
 };
 
 function App() {
+  const { initializeAuth } = useAuthStore();
+
+  useEffect(() => {
+    initializeAuth();
+  }, [initializeAuth]);
+
   return (
-    <ThemeProvider>
-      <Router>
-        <Routes>
+    <ErrorBoundary>
+      <ThemeProvider>
+        <Router>
+          <Routes>
           {/* Public Routes */}
           <Route path="/login" element={
             <PublicRoute>
@@ -130,6 +148,7 @@ function App() {
         </Routes>
       </Router>
     </ThemeProvider>
+    </ErrorBoundary>
   );
 }
 

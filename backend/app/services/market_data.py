@@ -2,11 +2,14 @@
 Market data service for fetching stock and crypto prices
 """
 import asyncio
+import logging
 from typing import List, Optional, Dict
 import httpx
 import yfinance as yf
 from datetime import datetime, timedelta
 from ..schemas import QuoteResponse, GainerResponse, AssetType, MarketOverview
+
+logger = logging.getLogger(__name__)
 
 
 class MarketDataService:
@@ -47,15 +50,15 @@ class MarketDataService:
         try:
             ticker = yf.Ticker(symbol)
             info = ticker.info
-            
+
             if not info or 'regularMarketPrice' not in info:
                 return None
-            
+
             current_price = info.get('regularMarketPrice', 0)
             previous_close = info.get('regularMarketPreviousClose', current_price)
             change = current_price - previous_close
             change_percent = (change / previous_close * 100) if previous_close else 0
-            
+
             return QuoteResponse(
                 symbol=symbol.upper(),
                 name=info.get('shortName', symbol),
@@ -71,8 +74,37 @@ class MarketDataService:
                 asset_type=AssetType.STOCK
             )
         except Exception as e:
-            print(f"Error fetching stock {symbol}: {e}")
+            logger.error(f"Error fetching stock {symbol}: {e}")
             return None
+
+    async def get_stock_quote_async(self, symbol: str) -> Optional[QuoteResponse]:
+        """Async wrapper for get_stock_quote"""
+        return self.get_stock_quote(symbol)
+
+    async def batch_fetch_quotes(self, symbols: Dict[str, str]) -> Dict[str, Optional[QuoteResponse]]:
+        """
+        Batch fetch quotes for multiple symbols
+        Args:
+            symbols: Dict mapping symbol -> asset_type ('STOCK' or 'CRYPTO')
+        Returns:
+            Dict mapping symbol -> QuoteResponse
+        """
+        results = {}
+        tasks = []
+
+        for symbol, asset_type in symbols.items():
+            if asset_type.upper() == 'STOCK':
+                tasks.append((symbol, self.get_stock_quote_async(symbol)))
+            else:
+                tasks.append((symbol, self.get_crypto_quote(symbol)))
+
+        # Run all tasks concurrently
+        if tasks:
+            responses = await asyncio.gather(*[task[1] for task in tasks], return_exceptions=True)
+            for (symbol, _), response in zip(tasks, responses):
+                results[symbol] = response if isinstance(response, QuoteResponse) else None
+
+        return results
     
     def get_stock_gainers(self, limit: int = 10) -> List[GainerResponse]:
         """Get top gaining stocks"""
@@ -101,7 +133,7 @@ class MarketDataService:
             
             return sorted(gainers, key=lambda x: x.change_percent, reverse=True)
         except Exception as e:
-            print(f"Error fetching stock gainers: {e}")
+            logger.error(f"Error fetching stock gainers: {e}")
             return []
     
     def get_stock_history(self, symbol: str, period: str = "1mo") -> List[Dict]:
@@ -122,7 +154,7 @@ class MarketDataService:
                 for index, row in hist.iterrows()
             ]
         except Exception as e:
-            print(f"Error fetching stock history: {e}")
+            logger.error(f"Error fetching stock history: {e}")
             return []
     
     # ============== Crypto Data ==============
@@ -170,7 +202,7 @@ class MarketDataService:
                 asset_type=AssetType.CRYPTO
             )
         except Exception as e:
-            print(f"Error fetching crypto {symbol}: {e}")
+            logger.error(f"Error fetching crypto {symbol}: {e}")
             return None
     
     async def get_crypto_gainers(self, limit: int = 10) -> List[GainerResponse]:
@@ -209,7 +241,7 @@ class MarketDataService:
             
             return gainers
         except Exception as e:
-            print(f"Error fetching crypto gainers: {e}")
+            logger.error(f"Error fetching crypto gainers: {e}")
             return []
     
     async def get_crypto_history(self, symbol: str, days: int = 30) -> List[Dict]:
@@ -238,7 +270,7 @@ class MarketDataService:
                 for p in prices
             ]
         except Exception as e:
-            print(f"Error fetching crypto history: {e}")
+            logger.error(f"Error fetching crypto history: {e}")
             return []
     
     # ============== Market Overview ==============
@@ -267,7 +299,7 @@ class MarketDataService:
                 top_crypto_gainers=crypto_gainers
             )
         except Exception as e:
-            print(f"Error fetching market overview: {e}")
+            logger.error(f"Error fetching market overview: {e}")
             return MarketOverview()
 
 
