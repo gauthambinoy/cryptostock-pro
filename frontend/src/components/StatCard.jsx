@@ -16,11 +16,11 @@ const StatCard = ({
   const TrendIcon = isPositive ? TrendingUp : TrendingDown;
   
   return (
-    <div className="glass-card p-6 animate-fade-in">
+    <div className="glass-card p-6 animate-fade-in dark:bg-white/5 dark:border-white/10 bg-gray-100/50 dark:text-white text-gray-900 border-gray-200/50">
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-sm text-gray-400 mb-1">{title}</p>
-          <p className="text-2xl font-bold">
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">{title}</p>
+          <p className="text-2xl font-bold dark:text-white text-gray-900">
             {prefix}
             {isCurrency ? formatCurrency(value) : value}
             {suffix}
