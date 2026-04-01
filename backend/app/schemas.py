@@ -187,6 +187,18 @@ class AlertCreate(BaseModel):
     asset_type: AssetType
     alert_type: AlertType
     target_value: float
+    notify_email: bool = True
+    notify_sms: bool = False
+    frequency: str = Field(default="immediately", pattern="^(immediately|daily|weekly|never)$")
+
+
+class AlertUpdate(BaseModel):
+    """Schema for updating an alert"""
+    target_value: Optional[float] = None
+    notify_email: Optional[bool] = None
+    notify_sms: Optional[bool] = None
+    frequency: Optional[str] = Field(None, pattern="^(immediately|daily|weekly|never)$")
+    is_active: Optional[bool] = None
 
 
 class AlertResponse(BaseModel):
@@ -199,9 +211,12 @@ class AlertResponse(BaseModel):
     is_active: bool
     is_triggered: bool
     triggered_at: Optional[datetime]
+    notify_email: bool
+    notify_sms: bool
+    frequency: str
     created_at: datetime
     current_price: Optional[float] = None
-    
+
     class Config:
         from_attributes = True
 
@@ -421,3 +436,146 @@ class SharedPortfolioData(BaseModel):
     holdings_count: int
     top_holdings: List[dict]
     created_at: str
+
+
+# ============== Backtest Schemas ==============
+
+class BacktestRequest(BaseModel):
+    """Request schema for starting a backtest"""
+    symbol: str = Field(..., max_length=20)
+    asset_type: AssetType
+    start_date: datetime
+    end_date: datetime
+    strategy: str = Field(default="buy_and_hold", pattern="^(buy_and_hold|sma_crossover)$")
+
+
+class TradeData(BaseModel):
+    """Individual trade data"""
+    entry_date: str
+    exit_date: str
+    entry_price: float
+    exit_price: float
+    return_percent: float
+    duration_days: int
+
+
+class MonteCarlStats(BaseModel):
+    """Monte Carlo simulation statistics"""
+    worst_case: float
+    median: float
+    best_case: float
+    std_dev: float
+
+
+class BacktestResponse(BaseModel):
+    """Response schema for backtest results"""
+    id: int
+    symbol: str
+    asset_type: AssetType
+    strategy: str
+    start_date: datetime
+    end_date: datetime
+    total_return_percent: float
+    annual_return_percent: float
+    sharpe_ratio: float
+    max_drawdown_percent: float
+    win_rate_percent: float
+    total_trades: int
+    benchmark_return_percent: Optional[float] = None
+    outperformance_percent: Optional[float] = None
+    equity_curve: List[float] = []
+    trades: List[TradeData] = []
+    monthly_returns: Optional[dict] = None
+    monte_carlo_stats: Optional[MonteCarlStats] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class BacktestSummary(BaseModel):
+    """Summary of a backtest for list views"""
+    id: int
+    symbol: str
+    asset_type: AssetType
+    strategy: str
+    start_date: datetime
+    end_date: datetime
+    total_return_percent: float
+    sharpe_ratio: float
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# ============== Leaderboard Schemas ==============
+
+class BadgeResponse(BaseModel):
+    """Schema for badge response"""
+    id: int
+    name: str
+    description: Optional[str]
+    icon_url: Optional[str]
+    rarity: str
+    earned_at: Optional[datetime]
+
+    class Config:
+        from_attributes = True
+
+
+class UserStatsResponse(BaseModel):
+    """Schema for user statistics"""
+    accuracy_percentage: float
+    total_predictions: int
+    correct_predictions: int
+    best_trade_return: float
+    total_trades: int
+    win_rate: float
+
+
+class LeaderboardEntryResponse(BaseModel):
+    """Schema for leaderboard entry"""
+    rank: Optional[int]
+    user_id: int
+    username: str
+    accuracy_percentage: float
+    total_predictions: int
+    correct_predictions: int
+    best_trade_return: float
+    total_trades: int
+    win_rate: float
+
+
+class UserRankResponse(BaseModel):
+    """Schema for user rank"""
+    user_id: int
+    username: str
+    rank: Optional[int]
+    accuracy_percentage: float
+    total_predictions: int
+    correct_predictions: int
+    best_trade_return: float
+    total_trades: int
+    win_rate: float
+
+
+class UserProfileResponse(BaseModel):
+    """Schema for user profile"""
+    user_id: int
+    username: str
+    full_name: Optional[str]
+    created_at: Optional[datetime]
+    stats: UserStatsResponse
+    badges: List[BadgeResponse]
+    followers_count: int
+    is_following: bool
+
+    class Config:
+        from_attributes = True
+
+
+class LeaderboardResponse(BaseModel):
+    """Schema for leaderboard list"""
+    period: str
+    data: List[LeaderboardEntryResponse]

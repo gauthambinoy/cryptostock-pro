@@ -1,8 +1,17 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 import { useAuthStore } from '../utils/store';
 import { formatCurrency, formatPercent } from '../utils/helpers';
-import { Trophy, Medal, Crown, RefreshCw } from 'lucide-react';
+import {
+  Trophy,
+  Medal,
+  Crown,
+  RefreshCw,
+  Search,
+  Filter,
+  User,
+} from 'lucide-react';
 
 const podiumStyles = [
   {
@@ -38,19 +47,26 @@ const podiumStyles = [
 ];
 
 const Leaderboard = () => {
+  const navigate = useNavigate();
   const { user } = useAuthStore();
   const [leaderboard, setLeaderboard] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [period, setPeriod] = useState('monthly');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [myRank, setMyRank] = useState(null);
 
   useEffect(() => {
     fetchLeaderboard();
-  }, []);
+    fetchMyRank();
+  }, [period]);
 
   const fetchLeaderboard = async () => {
     setIsLoading(true);
     try {
-      const res = await api.get('/leaderboard');
-      setLeaderboard(res.data || []);
+      const res = await api.get('/leaderboard/', {
+        params: { period, limit: 100 },
+      });
+      setLeaderboard(res.data?.data || []);
     } catch (error) {
       console.error('Failed to fetch leaderboard:', error);
     } finally {
@@ -58,15 +74,34 @@ const Leaderboard = () => {
     }
   };
 
-  const topThree = leaderboard.slice(0, 3);
-  const rest = leaderboard.slice(3);
-  // Reorder for podium display: 2nd, 1st, 3rd
-  const podiumOrder = topThree.length >= 3
-    ? [topThree[1], topThree[0], topThree[2]]
-    : topThree;
-  const podiumStyleOrder = topThree.length >= 3
-    ? [podiumStyles[1], podiumStyles[0], podiumStyles[2]]
-    : podiumStyles.slice(0, topThree.length);
+  const fetchMyRank = async () => {
+    try {
+      const res = await api.get('/leaderboard/my-rank', {
+        params: { period },
+      });
+      setMyRank(res.data);
+    } catch (error) {
+      console.error('Failed to fetch user rank:', error);
+    }
+  };
+
+  const handleViewProfile = (userId) => {
+    navigate(`/leaderboard/${userId}`);
+  };
+
+  const filtered = leaderboard.filter((entry) =>
+    entry.username.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const topThree = filtered.slice(0, 3);
+  const podiumOrder =
+    topThree.length >= 3
+      ? [topThree[1], topThree[0], topThree[2]]
+      : topThree;
+  const podiumStyleOrder =
+    topThree.length >= 3
+      ? [podiumStyles[1], podiumStyles[0], podiumStyles[2]]
+      : podiumStyles.slice(0, topThree.length);
 
   const isCurrentUser = (entry) => {
     if (!user) return false;
@@ -82,8 +117,8 @@ const Leaderboard = () => {
             <Trophy className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold">Leaderboard</h1>
-            <p className="text-gray-400">Top performers by portfolio returns</p>
+            <h1 className="text-2xl font-bold">Community Leaderboard</h1>
+            <p className="text-gray-400">Ranked by prediction accuracy</p>
           </div>
         </div>
         <button
@@ -96,6 +131,62 @@ const Leaderboard = () => {
         </button>
       </div>
 
+      {/* My Rank Card */}
+      {myRank && (
+        <div className="glass-card p-6 bg-gradient-to-r from-primary-500/20 to-primary-600/20 border border-primary-500/30">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-lg bg-primary-500/30 flex items-center justify-center">
+                <User className="w-6 h-6 text-primary-400" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-400">Your Rank</p>
+                <p className="text-2xl font-bold text-white">
+                  #{myRank.rank || '-'}
+                </p>
+              </div>
+            </div>
+            <div className="text-right space-y-1">
+              <div>
+                <p className="text-sm text-gray-400">Accuracy</p>
+                <p className="text-xl font-bold text-success-400">
+                  {myRank.accuracy_percentage?.toFixed(1)}%
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Period Filter & Search */}
+      <div className="glass-card p-6 flex flex-col md:flex-row gap-4">
+        <div className="flex gap-2 flex-wrap">
+          {['monthly', 'yearly', 'all_time'].map((p) => (
+            <button
+              key={p}
+              onClick={() => setPeriod(p)}
+              className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                period === p
+                  ? 'bg-primary-500 text-white'
+                  : 'bg-white/5 text-gray-400 hover:bg-white/10'
+              }`}
+            >
+              {p === 'all_time' ? 'All Time' : p.charAt(0).toUpperCase() + p.slice(1)}
+            </button>
+          ))}
+        </div>
+        <div className="flex-1 relative">
+          <Search className="absolute left-3 top-3 w-4 h-4 text-gray-500" />
+          <input
+            type="text"
+            placeholder="Search users..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-primary-500"
+          />
+        </div>
+      </div>
+
       {/* Podium */}
       {topThree.length > 0 && (
         <div className="glass-card p-8">
@@ -105,9 +196,10 @@ const Leaderboard = () => {
               if (!entry || !style) return null;
               const PodiumIcon = style.icon;
               return (
-                <div
-                  key={entry.username || idx}
-                  className="flex flex-col items-center"
+                <button
+                  key={entry.user_id || idx}
+                  onClick={() => handleViewProfile(entry.user_id)}
+                  className="flex flex-col items-center hover:opacity-80 transition-opacity cursor-pointer"
                 >
                   {/* Avatar & Badge */}
                   <div className="relative mb-3">
@@ -126,7 +218,9 @@ const Leaderboard = () => {
                   {/* Name */}
                   <p
                     className={`font-semibold text-sm md:text-base ${
-                      isCurrentUser(entry) ? 'text-primary-400' : 'text-white'
+                      isCurrentUser(entry)
+                        ? 'text-primary-400'
+                        : 'text-white'
                     }`}
                   >
                     {entry.username}
@@ -135,27 +229,27 @@ const Leaderboard = () => {
                     )}
                   </p>
 
-                  {/* Return */}
-                  <p className={`text-sm font-bold mt-1 ${
-                    (entry.total_return_percent || 0) >= 0 ? 'text-success-400' : 'text-danger-400'
-                  }`}>
-                    {formatPercent(entry.total_return_percent || 0)}
+                  {/* Accuracy */}
+                  <p className="text-sm font-bold mt-1 text-success-400">
+                    {entry.accuracy_percentage?.toFixed(1)}%
                   </p>
 
-                  {/* Value */}
+                  {/* Win Rate */}
                   <p className="text-xs text-gray-400 mt-0.5">
-                    {formatCurrency(entry.portfolio_value || 0)}
+                    {entry.win_rate?.toFixed(1)}% Win Rate
                   </p>
 
                   {/* Podium bar */}
                   <div
                     className={`w-20 md:w-28 ${style.height} mt-3 rounded-t-xl bg-gradient-to-t ${style.gradient} opacity-20 flex items-center justify-center`}
                   >
-                    <span className={`text-2xl font-black ${style.text} opacity-100`}>
+                    <span
+                      className={`text-2xl font-black ${style.text} opacity-100`}
+                    >
                       {style.label}
                     </span>
                   </div>
-                </div>
+                </button>
               );
             })}
           </div>
@@ -170,17 +264,18 @@ const Leaderboard = () => {
               <tr className="text-left text-sm text-gray-400 border-b border-white/10">
                 <th className="px-6 py-4 font-medium">Rank</th>
                 <th className="px-6 py-4 font-medium">User</th>
-                <th className="px-6 py-4 font-medium text-right">Total Return</th>
-                <th className="px-6 py-4 font-medium text-right">Portfolio Value</th>
+                <th className="px-6 py-4 font-medium text-right">Accuracy</th>
+                <th className="px-6 py-4 font-medium text-right">Trades</th>
+                <th className="px-6 py-4 font-medium text-right">Win Rate</th>
+                <th className="px-6 py-4 font-medium text-right">Action</th>
               </tr>
             </thead>
             <tbody>
-              {leaderboard.map((entry, index) => {
-                const rank = index + 1;
+              {filtered.map((entry, index) => {
                 const isCurrent = isCurrentUser(entry);
                 return (
                   <tr
-                    key={entry.username || index}
+                    key={entry.user_id || index}
                     className={`border-b border-white/5 transition-colors ${
                       isCurrent
                         ? 'bg-primary-500/10 hover:bg-primary-500/15'
@@ -190,31 +285,36 @@ const Leaderboard = () => {
                     <td className="px-6 py-4">
                       <span
                         className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold ${
-                          rank === 1
+                          entry.rank === 1
                             ? 'bg-yellow-500/20 text-yellow-400'
-                            : rank === 2
+                            : entry.rank === 2
                             ? 'bg-gray-400/20 text-gray-300'
-                            : rank === 3
+                            : entry.rank === 3
                             ? 'bg-orange-600/20 text-orange-400'
                             : 'text-gray-500'
                         }`}
                       >
-                        {rank}
+                        {entry.rank}
                       </span>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <div
                           className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm ${
-                            rank <= 3
-                              ? `bg-gradient-to-br ${podiumStyles[rank - 1]?.gradient || 'from-gray-500 to-gray-600'}`
+                            entry.rank <= 3
+                              ? `bg-gradient-to-br ${
+                                  podiumStyles[entry.rank - 1]?.gradient ||
+                                  'from-gray-500 to-gray-600'
+                                }`
                               : 'bg-gradient-to-br from-dark-300 to-dark-400'
                           }`}
                         >
                           {(entry.username || '?')[0].toUpperCase()}
                         </div>
                         <div>
-                          <p className={`font-semibold ${isCurrent ? 'text-primary-400' : ''}`}>
+                          <p className={`font-semibold ${
+                            isCurrent ? 'text-primary-400' : ''
+                          }`}>
                             {entry.username}
                           </p>
                           {isCurrent && (
@@ -224,18 +324,29 @@ const Leaderboard = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <span
-                        className={`font-medium ${
-                          (entry.total_return_percent || 0) >= 0
-                            ? 'text-success-400'
-                            : 'text-danger-400'
-                        }`}
-                      >
-                        {formatPercent(entry.total_return_percent || 0)}
+                      <span className="font-medium text-success-400">
+                        {entry.accuracy_percentage?.toFixed(1)}%
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-right font-medium">
-                      {formatCurrency(entry.portfolio_value || 0)}
+                    <td className="px-6 py-4 text-right">
+                      <span className="text-gray-300">
+                        {entry.total_trades || 0}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <span className="font-medium">
+                        {entry.win_rate?.toFixed(1)}%
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      {!isCurrent && (
+                        <button
+                          onClick={() => handleViewProfile(entry.user_id)}
+                          className="btn-sm btn-primary"
+                        >
+                          View
+                        </button>
+                      )}
                     </td>
                   </tr>
                 );
@@ -244,13 +355,17 @@ const Leaderboard = () => {
           </table>
         </div>
 
-        {leaderboard.length === 0 && (
+        {filtered.length === 0 && (
           <div className="p-12 text-center">
             <Trophy
-              className={`w-8 h-8 text-gray-600 mx-auto mb-4 ${isLoading ? 'animate-pulse' : ''}`}
+              className={`w-8 h-8 text-gray-600 mx-auto mb-4 ${
+                isLoading ? 'animate-pulse' : ''
+              }`}
             />
             <p className="text-gray-400">
-              {isLoading ? 'Loading leaderboard...' : 'No leaderboard data available'}
+              {isLoading
+                ? 'Loading leaderboard...'
+                : 'No leaderboard data available'}
             </p>
           </div>
         )}
