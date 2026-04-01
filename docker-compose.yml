@@ -6,9 +6,15 @@ services:
     ports:
       - "8000:8000"
     environment:
-      DATABASE_URL: sqlite:///./data/assetpulse.db
+      DATABASE_URL: ${DATABASE_URL:-sqlite:///./data/assetpulse.db}
       DEBUG: "false"
-      ALLOWED_ORIGINS: http://localhost:3000,http://localhost:8000
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-*}
+      NEWSAPI_KEY: ${NEWSAPI_KEY:-test}
+      FRED_API_KEY: ${FRED_API_KEY:-test}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-assetpulse-secret}
+      REDDIT_CLIENT_ID: ${REDDIT_CLIENT_ID:-}
+      REDDIT_CLIENT_SECRET: ${REDDIT_CLIENT_SECRET:-}
+      TWITTER_BEARER_TOKEN: ${TWITTER_BEARER_TOKEN:-}
     volumes:
       - ./data:/app/data
       - ./backend:/app/backend
@@ -17,14 +23,34 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 10s
+      start_period: 15s
+    restart: always
+    depends_on:
+      redis:
+        condition: service_healthy
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "10"
 
   redis:
     image: redis:7-alpine
     ports:
       - "6379:6379"
+    volumes:
+      - redis_data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+volumes:
+  redis_data:

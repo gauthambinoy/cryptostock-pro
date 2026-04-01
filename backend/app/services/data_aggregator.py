@@ -38,11 +38,19 @@ class DataAggregator:
         FREE: NewsAPI (100 requests/day free tier)
         """
         try:
+            import os
+            newsapi_key = os.getenv('NEWSAPI_KEY', '')
+
+            if not newsapi_key or newsapi_key == 'test':
+                # Fallback: return neutral sentiment if no API key
+                logger.warning("NewsAPI key not configured, returning default sentiment")
+                return {"sentiment": 0.0, "article_count": 0, "status": "no_api_key"}
+
             # Using NewsAPI (free tier available)
             urls = [
-                f"https://newsapi.org/v2/everything?q={symbol}&language=en&sortBy=publishedAt&pageSize=50",
-                f"https://newsapi.org/v2/everything?q={symbol} crypto&language=en&pageSize=50",
-                f"https://newsapi.org/v2/everything?q={symbol} stock&language=en&pageSize=50",
+                f"https://newsapi.org/v2/everything?q={symbol}&language=en&sortBy=publishedAt&pageSize=50&apiKey={newsapi_key}",
+                f"https://newsapi.org/v2/everything?q={symbol} crypto&language=en&pageSize=50&apiKey={newsapi_key}",
+                f"https://newsapi.org/v2/everything?q={symbol} stock&language=en&pageSize=50&apiKey={newsapi_key}",
             ]
 
             all_articles = []
@@ -85,16 +93,24 @@ class DataAggregator:
     async def get_reddit_sentiment(self, symbol: str) -> Dict:
         """
         Get Reddit sentiment from crypto/stock subreddits
-        FREE: Reddit API (no API key needed for public data)
+        FREE: Reddit API (credentials from environment)
         """
         try:
             import praw
+            import os
 
-            # Reddit API (no credentials needed for public data)
+            client_id = os.getenv('REDDIT_CLIENT_ID', '')
+            client_secret = os.getenv('REDDIT_CLIENT_SECRET', '')
+
+            if not client_id or not client_secret or client_id == 'YOUR_CLIENT_ID':
+                logger.warning("Reddit credentials not configured, returning default sentiment")
+                return {"sentiment": 0.0, "mentions": 0, "status": "no_credentials"}
+
+            # Reddit API with credentials
             reddit = praw.Reddit(
-                client_id='YOUR_CLIENT_ID',
-                client_secret='YOUR_CLIENT_SECRET',
-                user_agent='AssetPulse/1.0'
+                client_id=client_id,
+                client_secret=client_secret,
+                user_agent='AssetPulse/2.0'
             )
 
             subreddits_to_check = [
@@ -146,9 +162,16 @@ class DataAggregator:
         FREE: Twitter API v2 (free tier available)
         """
         try:
+            import os
+            bearer_token = os.getenv('TWITTER_BEARER_TOKEN', '')
+
+            if not bearer_token or bearer_token == 'YOUR_BEARER_TOKEN':
+                logger.warning("Twitter API key not configured, returning default sentiment")
+                return {"sentiment": 0.0, "tweets": 0, "status": "no_api_key"}
+
             # Twitter API v2 free endpoint
             headers = {
-                'Authorization': f'Bearer YOUR_BEARER_TOKEN'
+                'Authorization': f'Bearer {bearer_token}'
             }
 
             url = f"https://api.twitter.com/2/tweets/search/recent?query={symbol}&max_results=100&tweet.fields=created_at,public_metrics"
@@ -156,7 +179,8 @@ class DataAggregator:
             response = await self.http_client.get(url, headers=headers)
 
             if response.status_code != 200:
-                return {"sentiment": 0.0, "tweets": 0}
+                logger.warning(f"Twitter API error: {response.status_code}")
+                return {"sentiment": 0.0, "tweets": 0, "status": "api_error"}
 
             data = response.json()
             tweets = data.get('data', [])
@@ -195,7 +219,17 @@ class DataAggregator:
         FREE: FRED API (St. Louis Federal Reserve)
         """
         try:
-            fred_api_key = "YOUR_FRED_API_KEY"  # Get free from fred.stlouisfed.org
+            import os
+            fred_api_key = os.getenv('FRED_API_KEY', '')
+
+            if not fred_api_key or fred_api_key == 'test':
+                logger.warning("FRED API key not configured, returning default macro data")
+                return {
+                    'fed_rate': None,
+                    'unemployment': None,
+                    'inflation': None,
+                    'vix': None,
+                }
 
             indicators = {
                 'fed_rate': 'FEDFUNDS',
@@ -207,14 +241,17 @@ class DataAggregator:
             macro_data = {}
 
             for name, series_id in indicators.items():
-                url = f"https://api.stlouisfed.org/fred/series/observations?series_id={series_id}&api_key={fred_api_key}&file_type=json&limit=1"
-
-                response = await self.http_client.get(url)
-                if response.status_code == 200:
-                    data = response.json()
-                    observations = data.get('observations', [])
-                    if observations:
-                        macro_data[name] = float(observations[-1].get('value', 0))
+                try:
+                    url = f"https://api.stlouisfed.org/fred/series/observations?series_id={series_id}&api_key={fred_api_key}&file_type=json&limit=1"
+                    response = await self.http_client.get(url, timeout=5.0)
+                    if response.status_code == 200:
+                        data = response.json()
+                        observations = data.get('observations', [])
+                        if observations:
+                            macro_data[name] = float(observations[-1].get('value', 0))
+                except Exception as e:
+                    logger.warning(f"FRED {name} error: {e}")
+                    macro_data[name] = None
 
             return macro_data
         except Exception as e:
