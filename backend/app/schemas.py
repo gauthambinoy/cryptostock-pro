@@ -579,3 +579,99 @@ class LeaderboardResponse(BaseModel):
     """Schema for leaderboard list"""
     period: str
     data: List[LeaderboardEntryResponse]
+
+
+# ============== Subscription Schemas ==============
+
+class SubscriptionCreate(BaseModel):
+    """Schema for creating a subscription"""
+    plan: str = Field(..., description="Plan tier: free, pro, or enterprise")
+    is_annual: bool = Field(default=False, description="Annual or monthly billing")
+    payment_method_id: Optional[str] = Field(None, description="Stripe payment method ID")
+
+
+class SubscriptionUpdate(BaseModel):
+    """Schema for updating subscription"""
+    new_plan: str = Field(..., description="New plan tier")
+    is_annual: bool = Field(default=False)
+
+
+class SubscriptionResponse(BaseModel):
+    """Schema for subscription response"""
+    plan: str
+    status: str
+    current_period_start: Optional[datetime]
+    current_period_end: Optional[datetime]
+    is_annual: bool
+
+    class Config:
+        from_attributes = True
+
+
+class FeatureLimitResponse(BaseModel):
+    """Schema for feature limits"""
+    watchlists: Optional[int]
+    alerts_per_day: Optional[int]
+    prediction_days: int
+    sms_alerts: bool
+    backtesting: bool
+    api_access: bool
+
+
+class UsageMetricResponse(BaseModel):
+    """Schema for usage metric"""
+    sent: int
+    limit: Optional[int]
+    percent_used: int
+
+
+class UsageResponse(BaseModel):
+    """Schema for usage response"""
+    plan: str
+    usage: dict
+    features: dict
+
+
+class PaymentResponse(BaseModel):
+    """Schema for payment response"""
+    id: int
+    amount: float
+    currency: str
+    status: str
+    description: Optional[str]
+    receipt_url: Optional[str]
+    invoice_number: Optional[str]
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class PaymentHistoryResponse(BaseModel):
+    """Schema for payment history"""
+    total: int
+    limit: int
+    offset: int
+    payments: List[PaymentResponse]
+
+
+class PricingPlanResponse(BaseModel):
+    """Schema for pricing plan"""
+    plan: str
+    monthly_price_cents: int
+    annual_price_cents: int
+    annual_savings_percent: int
+    features: dict
+
+
+class PricingPlansResponse(BaseModel):
+    """Schema for all pricing plans"""
+    plans: List[PricingPlanResponse]
+    currency: str
+
+
+class FeatureAccessResponse(BaseModel):
+    """Schema for feature access check"""
+    feature: str
+    has_access: bool
+    message: str

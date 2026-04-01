@@ -120,88 +120,108 @@ const AdvancedChart = ({
   useEffect(() => {
     if (!containerRef.current || !data.length) return;
 
-    // Initialize chart
-    const chart = createChart(containerRef.current, {
-      width: containerRef.current.clientWidth,
-      height,
-      timeScale: chartConfig.timeScale,
-      layout: chartConfig.layout,
-      grid: chartConfig.grid,
-      crosshair: {
-        mode: CrosshairMode.Magnet,
-      },
-    });
+    try {
+      // Initialize chart
+      const width = containerRef.current.clientWidth || 800;
+      const chart = createChart(containerRef.current, {
+        width,
+        height,
+        timeScale: {
+          timeVisible: true,
+          secondsVisible: false,
+        },
+        layout: {
+          background: { color: theme === 'dark' ? '#0F172A' : '#FFFFFF' },
+          textColor: theme === 'dark' ? '#E0E7FF' : '#000000',
+        },
+        grid: {
+          vertLines: { color: theme === 'dark' ? '#1E293B' : '#F1F5F9' },
+          hLines: { color: theme === 'dark' ? '#1E293B' : '#F1F5F9' },
+        },
+        crosshair: {
+          mode: CrosshairMode.Magnet,
+        },
+      });
 
-    chartRef.current = chart;
+      chartRef.current = chart;
 
-    // Create candlestick series
-    const candleSeries = chart.addCandlestickSeries({
-      upColor: '#06A77D',
-      downColor: '#D62839',
-      borderVisible: true,
-      wickUpColor: '#06A77D',
-      wickDownColor: '#D62839',
-    });
+      // Create candlestick series
+      const candleSeries = chart.addCandlestickSeries({
+        upColor: '#06A77D',
+        downColor: '#D62839',
+        borderVisible: true,
+        wickUpColor: '#06A77D',
+        wickDownColor: '#D62839',
+      });
 
-    candleSeriesRef.current = candleSeries;
+      candleSeriesRef.current = candleSeries;
 
-    // Format data for lightweight-charts
-    const formattedData = data.map((candle) => ({
-      time: candle.timestamp,
-      open: candle.open,
-      high: candle.high,
-      low: candle.low,
-      close: candle.close,
-    }));
+      // Format data for lightweight-charts
+      const formattedData = data.map((candle) => ({
+        time: candle.timestamp,
+        open: candle.open,
+        high: candle.high,
+        low: candle.low,
+        close: candle.close,
+      }));
 
-    candleSeries.setData(formattedData);
+      candleSeries.setData(formattedData);
 
-    // Add selected indicators as line series
-    selectedIndicators.forEach((indicatorKey) => {
-      const found = Object.values(INDICATORS_AVAILABLE)
-        .flatMap(cat => Object.entries(cat))
-        .find(([key]) => key === indicatorKey);
+      // Add selected indicators as line series
+      selectedIndicators.forEach((indicatorKey) => {
+        const found = Object.values(INDICATORS_AVAILABLE)
+          .flatMap(cat => Object.entries(cat))
+          .find(([key]) => key === indicatorKey);
 
-      if (!found) return;
+        if (!found) return;
 
-      const [, config] = found;
-      if (config.type === 'oscillator' || config.type === 'volume') return; // Skip non-price indicators for now
+        const [, config] = found;
+        if (config.type === 'oscillator' || config.type === 'volume') return;
 
-      const indicatorData = indicators?.moving_averages?.[indicatorKey] ||
-                           indicators?.volatility?.[indicatorKey];
+        let indicatorData = null;
+        if (indicators?.moving_averages?.[indicatorKey]) {
+          indicatorData = indicators.moving_averages[indicatorKey];
+        } else if (indicators?.volatility?.[indicatorKey]) {
+          indicatorData = indicators.volatility[indicatorKey];
+        }
 
-      if (indicatorData) {
-        const lineSeries = chart.addLineSeries({
-          color: config.color,
-          lineWidth: 1,
-        });
+        if (indicatorData && Array.isArray(indicatorData)) {
+          const lineSeries = chart.addLineSeries({
+            color: config.color || '#FF6B6B',
+            lineWidth: 1,
+          });
 
-        const lineData = formattedData.map((candle, idx) => ({
-          time: candle.time,
-          value: indicatorData[idx],
-        })).filter(item => item.value !== null);
+          const lineData = formattedData.map((candle, idx) => ({
+            time: candle.time,
+            value: indicatorData[idx],
+          })).filter(item => item.value !== null && item.value !== undefined);
 
-        lineSeries.setData(lineData);
-      }
-    });
+          if (lineData.length > 0) {
+            lineSeries.setData(lineData);
+          }
+        }
+      });
 
-    chart.timeScale().fitContent();
+      chart.timeScale().fitContent();
 
-    const handleResize = () => {
-      if (containerRef.current) {
-        chart.applyOptions({
-          width: containerRef.current.clientWidth,
-          height,
-        });
-      }
-    };
+      const handleResize = () => {
+        if (containerRef.current) {
+          const newWidth = containerRef.current.clientWidth;
+          if (newWidth > 0) {
+            chart.applyOptions({ width: newWidth, height });
+          }
+        }
+      };
 
-    window.addEventListener('resize', handleResize);
+      window.addEventListener('resize', handleResize);
 
-    return () => {
-      window.removeEventListener('resize', handleResize);
-      chart.remove();
-    };
+      return () => {
+        window.removeEventListener('resize', handleResize);
+        chart.remove();
+      };
+    } catch (error) {
+      console.error('Error initializing chart:', error);
+    }
   }, [data, selectedIndicators, indicators, height, theme]);
 
   const toggleIndicator = (indicatorKey) => {
