@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import api from '../utils/api';
 import { formatCurrency } from '../utils/helpers';
-import { Brain, TrendingUp, TrendingDown, Minus, Activity } from 'lucide-react';
+import { Brain, TrendingUp, TrendingDown, Minus, Activity, Zap } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const POPULAR_STOCKS = ['AAPL', 'TSLA', 'GOOGL', 'MSFT', 'AMZN', 'NVDA', 'META'];
 const POPULAR_CRYPTO = ['BTC', 'ETH', 'SOL', 'ADA', 'DOT', 'DOGE', 'XRP'];
@@ -13,11 +14,31 @@ const signalConfig = {
 };
 
 const Prediction = () => {
+  const navigate = useNavigate();
   const [symbol, setSymbol] = useState('');
   const [assetType, setAssetType] = useState('stock');
   const [prediction, setPrediction] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [tradingConnected, setTradingConnected] = useState(false);
+
+  // Check trading connection
+  React.useEffect(() => {
+    const checkTradingConnection = async () => {
+      try {
+        const res = await fetch('/api/trading/status', {
+          credentials: 'include',
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setTradingConnected(data.is_connected);
+        }
+      } catch (err) {
+        console.error('Error checking trading status:', err);
+      }
+    };
+    checkTradingConnection();
+  }, []);
 
   const fetchPrediction = async (sym) => {
     const targetSymbol = sym || symbol;
@@ -45,6 +66,17 @@ const Prediction = () => {
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter') fetchPrediction();
+  };
+
+  const handleTrade = (direction) => {
+    if (!tradingConnected) {
+      navigate('/trading');
+      return;
+    }
+    // Navigate to trading panel with symbol and direction pre-filled
+    navigate('/trading', {
+      state: { symbol, direction, confidence }
+    });
   };
 
   const signal = prediction?.signal?.toUpperCase() || 'NEUTRAL';
@@ -164,13 +196,24 @@ const Prediction = () => {
                 </div>
               </div>
 
-              {/* Current Price */}
-              {prediction.current_price != null && (
-                <div className="text-right">
-                  <p className="text-sm text-gray-400">Current Price</p>
-                  <p className="text-2xl font-bold">{formatCurrency(prediction.current_price)}</p>
-                </div>
-              )}
+              {/* Current Price & Trade Button */}
+              <div className="flex flex-col items-end gap-3">
+                {prediction.current_price != null && (
+                  <div className="text-right">
+                    <p className="text-sm text-gray-400">Current Price</p>
+                    <p className="text-2xl font-bold">{formatCurrency(prediction.current_price)}</p>
+                  </div>
+                )}
+                {assetType === 'stock' && (
+                  <button
+                    onClick={() => handleTrade(signal.toLowerCase())}
+                    className="btn-primary flex items-center gap-2 whitespace-nowrap"
+                  >
+                    <Zap className="w-4 h-4" />
+                    {tradingConnected ? `Trade ${signal === 'BULLISH' ? 'Buy' : 'Sell'}` : 'Connect Trading'}
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* Confidence Meter */}

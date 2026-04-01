@@ -31,6 +31,15 @@ class Settings(BaseSettings):
     twilio_auth_token: str = ""
     twilio_phone_number: str = ""
 
+    # Payment Processing (Stripe)
+    stripe_secret_key: str = ""
+    stripe_publishable_key: str = ""
+    stripe_webhook_secret: str = ""
+    stripe_pro_monthly_price_id: str = ""
+    stripe_pro_annual_price_id: str = ""
+    stripe_enterprise_monthly_price_id: str = ""
+    stripe_enterprise_annual_price_id: str = ""
+
     # Server
     host: str = "0.0.0.0"
     port: int = 8000

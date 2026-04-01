@@ -36,6 +36,8 @@ import TaxReport from './pages/TaxReport';
 import Rebalance from './pages/Rebalance';
 import Backtester from './pages/Backtester';
 import UserProfile from './pages/UserProfile';
+import ChartAnalyzer from './pages/ChartAnalyzer';
+import TradingPanel from './pages/TradingPanel';
 
 // Components
 import Layout from './components/Layout';
@@ -140,6 +142,9 @@ function App() {
             <Route path="tax-report" element={<TaxReport />} />
             <Route path="rebalance" element={<Rebalance />} />
             <Route path="backtester" element={<Backtester />} />
+            <Route path="chart" element={<ChartAnalyzer />} />
+            <Route path="chart/:symbol" element={<ChartAnalyzer />} />
+            <Route path="trading" element={<TradingPanel />} />
             <Route path="top-picks" element={<TopPicks />} />
             <Route path="invest/analyze/:symbol" element={<DeepAnalysis />} />
             <Route path="invest/analyze" element={<DeepAnalysis />} />

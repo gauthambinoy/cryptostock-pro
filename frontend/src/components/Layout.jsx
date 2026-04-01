@@ -76,6 +76,7 @@ const Layout = () => {
       title: 'Markets',
       items: [
         { path: '/markets', icon: TrendingUp, label: 'Markets' },
+        { path: '/chart', icon: BarChart3, label: 'Chart Analyzer' },
         { path: '/watchlist', icon: Eye, label: 'Watchlist' },
         { path: '/screener', icon: SlidersHorizontal, label: 'Screener' },
         { path: '/gainers', icon: Flame, label: 'Top Gainers' },

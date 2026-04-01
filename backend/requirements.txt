@@ -54,3 +54,9 @@ sendgrid==6.11.0
 twilio==9.0.4
 apscheduler==3.10.4
 pytz==2024.1
+
+# Trading
+alpaca-trade-api==3.2.0
+
+# Payment Processing
+stripe==11.1.1

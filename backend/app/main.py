@@ -17,7 +17,8 @@ from .routers import (
     auth, portfolio, market, alerts,
     analytics, watchlist, transactions, goals,
     dividends, news, leaderboard, prediction,
-    converter, share, preferences, export, tools, investment, chat, backtest
+    converter, share, preferences, export, tools, investment, chat, backtest, trading, chart, subscriptions,
+    api_v1, developer
 )
 
 settings = get_settings()
@@ -159,6 +160,11 @@ app.include_router(tools.router)
 app.include_router(investment.router)
 app.include_router(chat.router)
 app.include_router(backtest.router)
+app.include_router(trading.router)
+app.include_router(chart.router)
+app.include_router(api_v1.router)
+app.include_router(developer.router)
+app.include_router(subscriptions.router)
 
 
 # Health check endpoint (use /health, not / so SPA serves at root)

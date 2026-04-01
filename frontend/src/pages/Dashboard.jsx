@@ -1,26 +1,58 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { usePortfolioStore, useMarketStore } from '../utils/store';
 import { formatCurrency, formatPercent, getChangeColor, formatCompact } from '../utils/helpers';
 import StatCard from '../components/StatCard';
 import PriceCard from '../components/PriceCard';
-import { 
-  Wallet, 
-  TrendingUp, 
-  TrendingDown, 
+import { Link } from 'react-router-dom';
+import {
+  Wallet,
+  TrendingUp,
+  TrendingDown,
   PieChart,
   Flame,
   Bitcoin,
   BarChart3,
-  RefreshCw
+  RefreshCw,
+  Zap,
+  ArrowRight
 } from 'lucide-react';
 
 const Dashboard = () => {
   const { portfolios, fetchPortfolios, isLoading: portfolioLoading } = usePortfolioStore();
   const { overview, stockGainers, cryptoGainers, fetchOverview, isLoading: marketLoading } = useMarketStore();
+  const [tradingAccount, setTradingAccount] = useState(null);
+  const [loadingTrading, setLoadingTrading] = useState(false);
+
+  // Fetch trading account status
+  const fetchTradingAccount = async () => {
+    setLoadingTrading(true);
+    try {
+      const response = await fetch('/api/trading/status', {
+        credentials: 'include',
+      });
+      if (response.ok) {
+        const data = await response.json();
+        if (data.is_connected) {
+          const accountResponse = await fetch('/api/trading/account', {
+            credentials: 'include',
+          });
+          if (accountResponse.ok) {
+            const account = await accountResponse.json();
+            setTradingAccount(account);
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching trading account:', err);
+    } finally {
+      setLoadingTrading(false);
+    }
+  };
 
   useEffect(() => {
     fetchPortfolios();
     fetchOverview();
+    fetchTradingAccount();
   }, []);
 
   // Calculate totals from all portfolios
@@ -52,6 +84,25 @@ const Dashboard = () => {
           Refresh
         </button>
       </div>
+
+      {/* Trading Account Alert */}
+      {tradingAccount && (
+        <div className="glass-card p-4 border border-blue-500/50 bg-blue-500/10">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Zap className="w-5 h-5 text-yellow-400" />
+              <div>
+                <p className="font-semibold">Live Trading Active</p>
+                <p className="text-sm text-gray-400">Balance: {formatCurrency(tradingAccount.account_balance)}</p>
+              </div>
+            </div>
+            <Link to="/trading" className="btn-secondary flex items-center gap-2">
+              Trading Panel
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+        </div>
+      )}
 
       {/* Portfolio Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">

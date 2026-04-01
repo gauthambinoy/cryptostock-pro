@@ -174,6 +174,15 @@ export const investAPI = {
   whenToSell: (symbol, assetType = 'stock') => api.get(`/invest/when-to-sell/${symbol}?asset_type=${assetType}`),
 };
 
+// Chart API
+export const chartAPI = {
+  getOHLCV: (symbol, timeframe = '1day') => api.get(`/chart/ohlcv?symbol=${symbol}&timeframe=${timeframe}`),
+  getIndicators: (symbol, timeframe = '1day', indicators = null) =>
+    api.get(`/chart/indicators?symbol=${symbol}&timeframe=${timeframe}${indicators ? `&indicators=${indicators.join(',')}` : ''}`),
+  getSupportResistance: (symbol, timeframe = '1day') => api.get(`/chart/support-resistance?symbol=${symbol}&timeframe=${timeframe}`),
+  getVolumeAnalysis: (symbol, timeframe = '1day') => api.get(`/chart/volume-analysis?symbol=${symbol}&timeframe=${timeframe}`),
+};
+
 // WebSocket connection for real-time updates
 export const createWebSocket = (onMessage) => {
   const wsUrl = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/api/market/ws`;
