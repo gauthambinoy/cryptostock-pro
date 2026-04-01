@@ -2,6 +2,7 @@
 Backtesting API endpoints
 """
 import logging
+import json
 from datetime import datetime
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -74,10 +75,10 @@ async def run_backtest(
             total_trades=backtest.total_trades,
             benchmark_return_percent=backtest.benchmark_return_percent,
             outperformance_percent=backtest.outperformance_percent,
-            equity_curve=eval(backtest.equity_curve) if backtest.equity_curve else [],
-            trades=eval(backtest.trades) if backtest.trades else [],
-            monthly_returns=eval(backtest.monthly_returns) if backtest.monthly_returns else {},
-            monte_carlo_stats=eval(backtest.monte_carlo_stats) if backtest.monte_carlo_stats else {},
+            equity_curve=json.loads(backtest.equity_curve) if backtest.equity_curve else [],
+            trades=json.loads(backtest.trades) if backtest.trades else [],
+            monthly_returns=json.loads(backtest.monthly_returns) if backtest.monthly_returns else {},
+            monte_carlo_stats=json.loads(backtest.monte_carlo_stats) if backtest.monte_carlo_stats else {},
             created_at=backtest.created_at
         )
 
@@ -122,10 +123,10 @@ async def get_backtest(
             total_trades=backtest.total_trades,
             benchmark_return_percent=backtest.benchmark_return_percent,
             outperformance_percent=backtest.outperformance_percent,
-            equity_curve=eval(backtest.equity_curve) if backtest.equity_curve else [],
-            trades=eval(backtest.trades) if backtest.trades else [],
-            monthly_returns=eval(backtest.monthly_returns) if backtest.monthly_returns else {},
-            monte_carlo_stats=eval(backtest.monte_carlo_stats) if backtest.monte_carlo_stats else {},
+            equity_curve=json.loads(backtest.equity_curve) if backtest.equity_curve else [],
+            trades=json.loads(backtest.trades) if backtest.trades else [],
+            monthly_returns=json.loads(backtest.monthly_returns) if backtest.monthly_returns else {},
+            monte_carlo_stats=json.loads(backtest.monte_carlo_stats) if backtest.monte_carlo_stats else {},
             created_at=backtest.created_at
         )
 
