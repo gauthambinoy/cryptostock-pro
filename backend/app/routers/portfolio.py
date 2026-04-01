@@ -1,64 +1,67 @@
 """
 Portfolio management API endpoints
 """
-from typing import List
+import asyncio
+import logging
+from datetime import datetime
+from typing import List, Dict
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from ..database import get_db
 from .. import schemas, auth, models
 from ..services.market_data import get_market_service
+from ..services.portfolio_metrics import (
+    calculate_holding_metrics,
+    calculate_portfolio_metrics,
+    calculate_allocation
+)
 
 router = APIRouter(prefix="/api/portfolio", tags=["Portfolio"])
-
-
-def calculate_holding_metrics(holding: models.Holding, current_price: float) -> dict:
-    """Calculate current value and gain/loss for a holding"""
-    current_value = holding.quantity * current_price
-    cost_basis = holding.quantity * holding.buy_price
-    gain_loss = current_value - cost_basis
-    gain_loss_percent = (gain_loss / cost_basis * 100) if cost_basis > 0 else 0
-    
-    return {
-        "current_price": current_price,
-        "current_value": round(current_value, 2),
-        "gain_loss": round(gain_loss, 2),
-        "gain_loss_percent": round(gain_loss_percent, 2)
-    }
+logger = logging.getLogger(__name__)
 
 
 @router.get("/", response_model=List[schemas.PortfolioResponse])
 async def get_portfolios(
     current_user: models.User = Depends(auth.get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    limit: int = 20,
+    offset: int = 0
 ):
     """
-    Get all portfolios for the current user
+    Get all portfolios for the current user (paginated)
     """
-    portfolios = db.query(models.Portfolio).filter(
+    query = db.query(models.Portfolio).filter(
         models.Portfolio.user_id == current_user.id
-    ).all()
-    
+    )
+    portfolios = query.offset(offset).limit(limit).all()
+
     market_service = get_market_service()
     result = []
-    
+
+    # Collect all unique symbols across all portfolios for batch fetching
+    all_symbols: Dict[str, str] = {}
+    for portfolio in portfolios:
+        for holding in portfolio.holdings:
+            symbol = holding.symbol
+            asset_type = holding.asset_type.value if hasattr(holding.asset_type, 'value') else str(holding.asset_type)
+            all_symbols[symbol] = asset_type
+
+    # Batch fetch all quotes at once
+    quotes = await market_service.batch_fetch_quotes(all_symbols) if all_symbols else {}
+
     for portfolio in portfolios:
         total_value = 0
         total_invested = 0
-        
+
         for holding in portfolio.holdings:
-            # Get current price
-            if holding.asset_type == models.AssetType.STOCK:
-                quote = market_service.get_stock_quote(holding.symbol)
-            else:
-                quote = await market_service.get_crypto_quote(holding.symbol)
-            
+            quote = quotes.get(holding.symbol)
             if quote:
                 total_value += holding.quantity * quote.price
             total_invested += holding.quantity * holding.buy_price
-        
+
         gain_loss = total_value - total_invested
         gain_loss_percent = (gain_loss / total_invested * 100) if total_invested > 0 else 0
-        
+
         result.append(schemas.PortfolioResponse(
             id=portfolio.id,
             name=portfolio.name,
@@ -67,7 +70,7 @@ async def get_portfolios(
             total_gain_loss=round(gain_loss, 2),
             total_gain_loss_percent=round(gain_loss_percent, 2)
         ))
-    
+
     return result
 
 
@@ -106,32 +109,38 @@ async def get_holdings(
     db: Session = Depends(get_db)
 ):
     """
-    Get all holdings in a portfolio
+    Get all holdings in a portfolio (excludes soft-deleted)
     """
     portfolio = db.query(models.Portfolio).filter(
         models.Portfolio.id == portfolio_id,
-        models.Portfolio.user_id == current_user.id
+        models.Portfolio.user_id == current_user.id,
+        models.Portfolio.is_deleted == False
     ).first()
-    
+
     if not portfolio:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Portfolio not found"
         )
-    
+
     market_service = get_market_service()
+
+    # Get only non-deleted holdings
+    active_holdings = [h for h in portfolio.holdings if not h.is_deleted]
+
+    # Batch fetch all quotes at once
+    symbols_dict = {
+        h.symbol: (h.asset_type.value if hasattr(h.asset_type, 'value') else str(h.asset_type))
+        for h in active_holdings
+    }
+    quotes = await market_service.batch_fetch_quotes(symbols_dict) if symbols_dict else {}
+
     result = []
-    
-    for holding in portfolio.holdings:
-        # Get current price
-        if holding.asset_type == models.AssetType.STOCK:
-            quote = market_service.get_stock_quote(holding.symbol)
-        else:
-            quote = await market_service.get_crypto_quote(holding.symbol)
-        
+    for holding in active_holdings:
+        quote = quotes.get(holding.symbol)
         current_price = quote.price if quote else holding.buy_price
         metrics = calculate_holding_metrics(holding, current_price)
-        
+
         result.append(schemas.HoldingResponse(
             id=holding.id,
             symbol=holding.symbol,
@@ -143,7 +152,7 @@ async def get_holdings(
             notes=holding.notes,
             **metrics
         ))
-    
+
     return result
 
 
@@ -161,26 +170,23 @@ async def add_holding(
         models.Portfolio.id == portfolio_id,
         models.Portfolio.user_id == current_user.id
     ).first()
-    
+
     if not portfolio:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Portfolio not found"
         )
-    
+
     # Get asset name if not provided
     market_service = get_market_service()
     name = holding_data.name
-    
+
     if not name:
-        if holding_data.asset_type == schemas.AssetType.STOCK:
-            quote = market_service.get_stock_quote(holding_data.symbol)
-        else:
-            quote = await market_service.get_crypto_quote(holding_data.symbol)
-        
+        asset_type_val = holding_data.asset_type.value if hasattr(holding_data.asset_type, 'value') else str(holding_data.asset_type)
+        quote = (await market_service.batch_fetch_quotes({holding_data.symbol.upper(): asset_type_val})).get(holding_data.symbol.upper())
         if quote:
             name = quote.name
-    
+
     holding = models.Holding(
         portfolio_id=portfolio_id,
         symbol=holding_data.symbol.upper(),
@@ -191,20 +197,17 @@ async def add_holding(
         buy_date=holding_data.buy_date,
         notes=holding_data.notes
     )
-    
+
     db.add(holding)
     db.commit()
     db.refresh(holding)
-    
+
     # Get current price for response
-    if holding_data.asset_type == schemas.AssetType.STOCK:
-        quote = market_service.get_stock_quote(holding.symbol)
-    else:
-        quote = await market_service.get_crypto_quote(holding.symbol)
-    
+    asset_type_val = holding_data.asset_type.value if hasattr(holding_data.asset_type, 'value') else str(holding_data.asset_type)
+    quote = (await market_service.batch_fetch_quotes({holding.symbol: asset_type_val})).get(holding.symbol)
     current_price = quote.price if quote else holding.buy_price
     metrics = calculate_holding_metrics(holding, current_price)
-    
+
     return schemas.HoldingResponse(
         id=holding.id,
         symbol=holding.symbol,
@@ -234,13 +237,13 @@ async def update_holding(
         models.Portfolio.id == portfolio_id,
         models.Portfolio.user_id == current_user.id
     ).first()
-    
+
     if not holding:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Holding not found"
         )
-    
+
     if holding_data.quantity is not None:
         holding.quantity = holding_data.quantity
     if holding_data.buy_price is not None:
@@ -249,20 +252,17 @@ async def update_holding(
         holding.buy_date = holding_data.buy_date
     if holding_data.notes is not None:
         holding.notes = holding_data.notes
-    
+
     db.commit()
     db.refresh(holding)
-    
+
     # Get current price
     market_service = get_market_service()
-    if holding.asset_type == models.AssetType.STOCK:
-        quote = market_service.get_stock_quote(holding.symbol)
-    else:
-        quote = await market_service.get_crypto_quote(holding.symbol)
-    
+    asset_type_val = holding.asset_type.value if hasattr(holding.asset_type, 'value') else str(holding.asset_type)
+    quote = (await market_service.batch_fetch_quotes({holding.symbol: asset_type_val})).get(holding.symbol)
     current_price = quote.price if quote else holding.buy_price
     metrics = calculate_holding_metrics(holding, current_price)
-    
+
     return schemas.HoldingResponse(
         id=holding.id,
         symbol=holding.symbol,
@@ -284,22 +284,26 @@ async def delete_holding(
     db: Session = Depends(get_db)
 ):
     """
-    Delete a holding from portfolio
+    Delete a holding from portfolio (soft delete)
     """
     holding = db.query(models.Holding).join(models.Portfolio).filter(
         models.Holding.id == holding_id,
         models.Portfolio.id == portfolio_id,
-        models.Portfolio.user_id == current_user.id
+        models.Portfolio.user_id == current_user.id,
+        models.Holding.is_deleted == False
     ).first()
-    
+
     if not holding:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Holding not found"
         )
-    
-    db.delete(holding)
+
+    # Soft delete - mark as deleted instead of removing
+    holding.is_deleted = True
+    holding.deleted_at = datetime.utcnow()
     db.commit()
+    logger.info(f"Soft deleted holding {holding_id} for user {current_user.id}")
 
 
 @router.get("/{portfolio_id}/performance", response_model=schemas.PortfolioPerformance)
@@ -315,52 +319,54 @@ async def get_portfolio_performance(
         models.Portfolio.id == portfolio_id,
         models.Portfolio.user_id == current_user.id
     ).first()
-    
+
     if not portfolio:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Portfolio not found"
         )
-    
+
     market_service = get_market_service()
-    
+
+    # Batch fetch all quotes at once
+    symbols_dict = {
+        h.symbol: (h.asset_type.value if hasattr(h.asset_type, 'value') else str(h.asset_type))
+        for h in portfolio.holdings
+    }
+    quotes = await market_service.batch_fetch_quotes(symbols_dict) if symbols_dict else {}
+
     total_invested = 0
     current_value = 0
     allocation = {}
     holdings_with_metrics = []
-    
+
     for holding in portfolio.holdings:
-        # Get current price
-        if holding.asset_type == models.AssetType.STOCK:
-            quote = market_service.get_stock_quote(holding.symbol)
-        else:
-            quote = await market_service.get_crypto_quote(holding.symbol)
-        
+        quote = quotes.get(holding.symbol)
         price = quote.price if quote else holding.buy_price
         value = holding.quantity * price
         invested = holding.quantity * holding.buy_price
-        
+
         total_invested += invested
         current_value += value
-        
+
         metrics = calculate_holding_metrics(holding, price)
         holdings_with_metrics.append({
             "holding": holding,
             "metrics": metrics
         })
-    
+
     # Calculate allocation
     for item in holdings_with_metrics:
         h = item["holding"]
         m = item["metrics"]
         allocation[h.symbol] = round((m["current_value"] / current_value * 100) if current_value > 0 else 0, 2)
-    
+
     # Find best and worst performers
     sorted_holdings = sorted(holdings_with_metrics, key=lambda x: x["metrics"]["gain_loss_percent"], reverse=True)
-    
+
     best = None
     worst = None
-    
+
     if sorted_holdings:
         best_item = sorted_holdings[0]
         best = schemas.HoldingResponse(
@@ -374,7 +380,7 @@ async def get_portfolio_performance(
             notes=best_item["holding"].notes,
             **best_item["metrics"]
         )
-        
+
         worst_item = sorted_holdings[-1]
         worst = schemas.HoldingResponse(
             id=worst_item["holding"].id,
@@ -387,10 +393,10 @@ async def get_portfolio_performance(
             notes=worst_item["holding"].notes,
             **worst_item["metrics"]
         )
-    
+
     gain_loss = current_value - total_invested
     gain_loss_percent = (gain_loss / total_invested * 100) if total_invested > 0 else 0
-    
+
     return schemas.PortfolioPerformance(
         total_invested=round(total_invested, 2),
         current_value=round(current_value, 2),

@@ -1,43 +1,35 @@
-FROM node:20-slim AS frontend-builder
-WORKDIR /app/frontend
-COPY frontend/package*.json ./
-RUN npm install
-COPY frontend/ .
-RUN VITE_API_URL=/api npm run build
-
 FROM python:3.11-slim
+
 WORKDIR /app
 
-# Install system deps
-RUN apt-get update && apt-get install -y --no-install-recommends gcc && rm -rf /var/lib/apt/lists/*
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
 
-# Install Python deps
-COPY backend/requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-RUN pip install --no-cache-dir scikit-learn
+# Copy backend requirements
+COPY backend/requirements.txt ./backend/
 
-# Copy backend
-COPY backend/ .
+# Install Python dependencies
+RUN pip install --no-cache-dir -r backend/requirements.txt gunicorn
 
-# Copy frontend build
-COPY --from=frontend-builder /app/frontend/dist /app/static
+# Copy backend code
+COPY backend ./backend
 
-# Create SQLite database directory and generate secret key at build time
+# Create data directory for SQLite
 RUN mkdir -p /app/data
-RUN python3 -c "import secrets; f=open('/app/.secret_key','w'); f.write(secrets.token_urlsafe(64)); f.close()"
 
-# Create entrypoint script that sets SECRET_KEY from file if not provided
-RUN echo '#!/bin/bash\nif [ -z "$SECRET_KEY" ]; then export SECRET_KEY=$(cat /app/.secret_key); fi\nexec "$@"' > /app/entrypoint.sh && chmod +x /app/entrypoint.sh
+# Set environment variables
+ENV PYTHONUNBUFFERED=1
+ENV DATABASE_URL=sqlite:///./data/assetpulse.db
 
-# Expose port (HuggingFace uses 7860)
-EXPOSE 7860
+# Expose port
+EXPOSE 8000
 
-# Set environment variables (SECRET_KEY generated at runtime from .secret_key file)
-ENV DATABASE_URL=sqlite:///./data/cryptostock.db
-ENV HOST=0.0.0.0
-ENV PORT=7860
-ENV DEBUG=false
-ENV ALLOWED_ORIGINS=["*"]
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost:8000/health || exit 1
 
-ENTRYPOINT ["/app/entrypoint.sh"]
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "7860"]
+# Run the application
+CMD ["gunicorn", "-w", "4", "-k", "uvicorn.workers.UvicornWorker", "app.main:app", "--bind", "0.0.0.0:8000", "--timeout", "120"]

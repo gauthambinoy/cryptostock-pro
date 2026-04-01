@@ -29,3 +29,18 @@ slowapi==0.1.9
 
 # CORS
 starlette==0.35.1
+
+# Data Science & ML
+pandas==2.2.0
+numpy==1.26.4
+scikit-learn==1.4.1.post1
+statsmodels==0.14.0
+arch==6.2.0
+
+# Sentiment Analysis & NLP
+textblob==0.17.1
+newsapi==1.1.4
+
+# Social Media APIs
+praw==7.7.0
+tweepy==4.14.0

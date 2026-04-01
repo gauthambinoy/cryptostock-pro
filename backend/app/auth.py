@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from .config import get_settings
@@ -17,8 +17,8 @@ settings = get_settings()
 # Password hashing context
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-# OAuth2 scheme for token extraction
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
+# OAuth2 scheme for token extraction (fallback for Authorization header)
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -61,31 +61,38 @@ def decode_token(token: str) -> Optional[schemas.TokenData]:
 
 
 async def get_current_user(
+    request: Request,
     token: str = Depends(oauth2_scheme),
     db: Session = Depends(get_db)
 ) -> models.User:
-    """Get current authenticated user from token"""
+    """Get current authenticated user from token (cookie or Authorization header)"""
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
-    
-    token_data = decode_token(token)
+
+    # Try to get token from cookie first, then fall back to Authorization header
+    access_token = request.cookies.get("access_token") or token
+
+    if not access_token:
+        raise credentials_exception
+
+    token_data = decode_token(access_token)
     if token_data is None or token_data.user_id is None:
         raise credentials_exception
-    
+
     user = db.query(models.User).filter(models.User.id == token_data.user_id).first()
-    
+
     if user is None:
         raise credentials_exception
-    
+
     if not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="User account is disabled"
         )
-    
+
     return user
 
 

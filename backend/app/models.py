@@ -1,7 +1,7 @@
 """
 SQLAlchemy database models
 """
-from sqlalchemy import Column, Integer, String, Float, DateTime, Boolean, ForeignKey, Enum
+from sqlalchemy import Column, Integer, String, Float, DateTime, Boolean, ForeignKey, Enum, Index
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from .database import Base
@@ -48,13 +48,15 @@ class User(Base):
 class Portfolio(Base):
     """User portfolio model"""
     __tablename__ = "portfolios"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(100), nullable=False, default="Main Portfolio")
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    is_deleted = Column(Boolean, default=False, index=True)
+    deleted_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
-    
+
     # Relationships
     owner = relationship("User", back_populates="portfolios")
     holdings = relationship("Holding", back_populates="portfolio", cascade="all, delete-orphan")
@@ -63,7 +65,7 @@ class Portfolio(Base):
 class Holding(Base):
     """Individual asset holding in a portfolio"""
     __tablename__ = "holdings"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     portfolio_id = Column(Integer, ForeignKey("portfolios.id", ondelete="CASCADE"), nullable=False)
     symbol = Column(String(20), nullable=False, index=True)
@@ -73,9 +75,16 @@ class Holding(Base):
     buy_price = Column(Float, nullable=False)
     buy_date = Column(DateTime(timezone=True), nullable=False)
     notes = Column(String(500))
+    is_deleted = Column(Boolean, default=False, index=True)
+    deleted_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
-    
+
+    # Composite indexes for efficient lookups
+    __table_args__ = (
+        Index('ix_portfolio_symbol', 'portfolio_id', 'symbol'),
+    )
+
     # Relationships
     portfolio = relationship("Portfolio", back_populates="holdings")
 
@@ -83,7 +92,7 @@ class Holding(Base):
 class Alert(Base):
     """Price alert model"""
     __tablename__ = "alerts"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     symbol = Column(String(20), nullable=False, index=True)
@@ -93,8 +102,16 @@ class Alert(Base):
     is_active = Column(Boolean, default=True)
     is_triggered = Column(Boolean, default=False)
     triggered_at = Column(DateTime(timezone=True))
+    is_deleted = Column(Boolean, default=False, index=True)
+    deleted_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    
+
+    # Composite indexes for efficient lookups
+    __table_args__ = (
+        Index('ix_user_symbol_alert', 'user_id', 'symbol'),
+        Index('ix_user_active_alert', 'user_id', 'is_active'),
+    )
+
     # Relationships
     owner = relationship("User", back_populates="alerts")
 
@@ -102,12 +119,17 @@ class Alert(Base):
 class WatchlistItem(Base):
     """User watchlist item"""
     __tablename__ = "watchlist_items"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     symbol = Column(String(20), nullable=False, index=True)
     asset_type = Column(Enum(AssetType), nullable=False)
     added_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Composite index for efficient user watchlist lookups
+    __table_args__ = (
+        Index('ix_user_symbol_watchlist', 'user_id', 'symbol'),
+    )
 
 
 class Transaction(Base):
@@ -126,7 +148,15 @@ class Transaction(Base):
     total_amount = Column(Float, nullable=False)
     notes = Column(String(500))
     transaction_date = Column(DateTime(timezone=True), nullable=False)
+    is_deleted = Column(Boolean, default=False, index=True)
+    deleted_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Composite indexes for efficient lookups
+    __table_args__ = (
+        Index('ix_user_portfolio_tx', 'user_id', 'portfolio_id'),
+        Index('ix_portfolio_date_tx', 'portfolio_id', 'transaction_date'),
+    )
 
 
 class Goal(Base):
@@ -140,6 +170,8 @@ class Goal(Base):
     current_amount = Column(Float, default=0)
     deadline = Column(DateTime(timezone=True))
     is_completed = Column(Boolean, default=False)
+    is_deleted = Column(Boolean, default=False, index=True)
+    deleted_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 
@@ -155,6 +187,11 @@ class Dividend(Base):
     total_amount = Column(Float, nullable=False)
     payment_date = Column(DateTime(timezone=True), nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Composite index for efficient user dividend lookups
+    __table_args__ = (
+        Index('ix_user_symbol_dividend', 'user_id', 'symbol'),
+    )
 
 
 class UserPreference(Base):

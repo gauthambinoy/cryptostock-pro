@@ -1,6 +1,7 @@
 """
 Application configuration using Pydantic Settings
 """
+import logging
 from pydantic_settings import BaseSettings
 from functools import lru_cache
 
@@ -33,13 +34,26 @@ class Settings(BaseSettings):
         env_file_encoding = "utf-8"
 
 
+def setup_logging(debug: bool = False):
+    """Configure application logging"""
+    log_level = logging.DEBUG if debug else logging.INFO
+    log_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+
+    logging.basicConfig(
+        level=log_level,
+        format=log_format,
+        handlers=[
+            logging.StreamHandler(),
+        ]
+    )
+
+
 @lru_cache()
 def get_settings() -> Settings:
     """Get cached settings instance. Auto-generates secret key if not set."""
     settings = Settings()
     if not settings.secret_key:
         import secrets
-        import logging
         settings.secret_key = secrets.token_urlsafe(64)
         logging.getLogger(__name__).warning(
             "SECRET_KEY not set! Generated a random key. Set SECRET_KEY env var for production."
