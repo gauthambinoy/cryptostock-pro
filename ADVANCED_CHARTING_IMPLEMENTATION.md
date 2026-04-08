@@ -474,7 +474,6 @@ Frontend:
 - ChartAnalyzer page (300 lines)
 - Fully responsive and accessible
 
-Co-Authored-By: Claude Haiku 4.5 <noreply@anthropic.com>
 ```
 
 ## Conclusion
