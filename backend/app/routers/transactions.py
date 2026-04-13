@@ -5,9 +5,23 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
+from pydantic import BaseModel, Field
+from datetime import datetime
+from datetime import datetime as dt_type
 from ..database import get_db
 from .. import auth, models
-from datetime import datetime
+
+
+class TransactionCreate(BaseModel):
+    portfolio_id: int = Field(..., gt=0)
+    symbol: str = Field(..., min_length=1, max_length=10)
+    name: Optional[str] = None
+    asset_type: str = Field(..., pattern="^(stock|crypto)$")
+    transaction_type: str = Field(..., pattern="^(buy|sell)$")
+    quantity: float = Field(..., gt=0)
+    price: float = Field(..., gt=0)
+    notes: Optional[str] = Field(None, max_length=500)
+    transaction_date: dt_type
 
 router = APIRouter(prefix="/api/transactions", tags=["Transactions"])
 
@@ -54,32 +68,32 @@ async def get_transactions(
 
 @router.post("/", status_code=status.HTTP_201_CREATED)
 async def create_transaction(
-    data: dict,
+    data: TransactionCreate,
     current_user: models.User = Depends(auth.get_current_user),
     db: Session = Depends(get_db)
 ):
     portfolio = db.query(models.Portfolio).filter(
-        models.Portfolio.id == data["portfolio_id"],
+        models.Portfolio.id == data.portfolio_id,
         models.Portfolio.user_id == current_user.id
     ).first()
 
     if not portfolio:
         raise HTTPException(status_code=404, detail="Portfolio not found")
 
-    total_amount = data["quantity"] * data["price"]
+    total_amount = data.quantity * data.price
 
     transaction = models.Transaction(
         user_id=current_user.id,
-        portfolio_id=data["portfolio_id"],
-        symbol=data["symbol"].upper(),
-        name=data.get("name", data["symbol"].upper()),
-        asset_type=models.AssetType(data["asset_type"]),
-        transaction_type=data["transaction_type"],
-        quantity=data["quantity"],
-        price=data["price"],
+        portfolio_id=data.portfolio_id,
+        symbol=data.symbol.upper(),
+        name=data.name or data.symbol.upper(),
+        asset_type=models.AssetType(data.asset_type),
+        transaction_type=data.transaction_type,
+        quantity=data.quantity,
+        price=data.price,
         total_amount=total_amount,
-        notes=data.get("notes"),
-        transaction_date=datetime.fromisoformat(data["transaction_date"]) if isinstance(data["transaction_date"], str) else data["transaction_date"],
+        notes=data.notes,
+        transaction_date=data.transaction_date,
     )
 
     db.add(transaction)

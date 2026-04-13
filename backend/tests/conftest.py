@@ -1,7 +1,14 @@
 """
 Shared pytest fixtures and configuration
 """
+import os
 import pytest
+
+# Set test environment variables BEFORE importing app
+os.environ["SECRET_KEY"] = "test-secret-key-for-testing-only-not-production"
+os.environ["DATABASE_URL"] = "sqlite:///./test_quantumledger.db"
+os.environ["ENVIRONMENT"] = "testing"
+os.environ["DEBUG"] = "true"
 from datetime import datetime, timedelta
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker

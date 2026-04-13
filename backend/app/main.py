@@ -2,6 +2,9 @@
 QuantumLedger - Main Application Entry Point
 AI-Powered Profit Prediction Platform
 """
+import logging
+import time
+import uuid
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -9,6 +12,8 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from contextlib import asynccontextmanager
+
+logger = logging.getLogger(__name__)
 
 from .config import get_settings
 from .database import init_db
@@ -20,6 +25,7 @@ from .routers import (
     converter, share, preferences, export, tools, investment, chat, backtest, trading, chart, subscriptions,
     api_v1, developer
 )
+from .routers import whale_alerts, portfolio_dna, sentiment_radar, time_machine, smart_money
 
 settings = get_settings()
 
@@ -31,32 +37,32 @@ limiter = Limiter(key_func=get_remote_address)
 async def lifespan(app: FastAPI):
     """Application lifespan events"""
     # Startup
-    print("🚀 Starting QuantumLedger - 90%+ Accuracy Profit Prediction...")
+    logger.info("🚀 Starting QuantumLedger - 90%+ Accuracy Profit Prediction...")
     init_db()
-    print("✅ Database initialized")
-    print("📊 Data aggregator ready (News + Reddit + Twitter + FRED + CoinGecko)")
-    print("🤖 ML ensemble prediction engine loaded")
+    logger.info("✅ Database initialized")
+    logger.info("📊 Data aggregator ready (News + Reddit + Twitter + FRED + CoinGecko)")
+    logger.info("🤖 ML ensemble prediction engine loaded")
     try:
         initialize_scheduler()
-        print("📅 Leaderboard scheduler initialized")
+        logger.info("📅 Leaderboard scheduler initialized")
     except Exception as e:
-        print(f"⚠️ Warning: Could not initialize leaderboard scheduler: {e}")
+        logger.warning(f"⚠️ Could not initialize leaderboard scheduler: {e}")
     try:
         init_alert_scheduler()
-        print("🔔 Alert scheduler initialized")
+        logger.info("🔔 Alert scheduler initialized")
     except Exception as e:
-        print(f"⚠️ Warning: Could not initialize alert scheduler: {e}")
+        logger.warning(f"⚠️ Could not initialize alert scheduler: {e}")
     yield
     # Shutdown
-    print("👋 Shutting down QuantumLedger...")
+    logger.info("👋 Shutting down QuantumLedger...")
     try:
         shutdown_scheduler()
     except Exception as e:
-        print(f"⚠️ Warning: Error shutting down scheduler: {e}")
+        logger.warning(f"⚠️ Error shutting down scheduler: {e}")
     try:
         stop_alert_scheduler()
     except Exception as e:
-        print(f"⚠️ Warning: Error shutting down alert scheduler: {e}")
+        logger.warning(f"⚠️ Error shutting down alert scheduler: {e}")
 
 
 # Create FastAPI app
@@ -127,6 +133,22 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 app.add_middleware(SecurityHeadersMiddleware)
 
 
+class RequestLoggingMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        request_id = str(uuid.uuid4())[:8]
+        start_time = time.time()
+        response = await call_next(request)
+        duration = round((time.time() - start_time) * 1000, 2)
+        logger.info(
+            f"[{request_id}] {request.method} {request.url.path} "
+            f"→ {response.status_code} ({duration}ms)"
+        )
+        response.headers["X-Request-ID"] = request_id
+        return response
+
+app.add_middleware(RequestLoggingMiddleware)
+
+
 # Global exception handler
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
@@ -165,6 +187,11 @@ app.include_router(chart.router)
 app.include_router(api_v1.router)
 app.include_router(developer.router)
 app.include_router(subscriptions.router)
+app.include_router(whale_alerts.router)
+app.include_router(portfolio_dna.router)
+app.include_router(sentiment_radar.router)
+app.include_router(time_machine.router)
+app.include_router(smart_money.router)
 
 
 # Health check endpoint (use /health, not / so SPA serves at root)

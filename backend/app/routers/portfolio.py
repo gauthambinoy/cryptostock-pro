@@ -5,7 +5,7 @@ import asyncio
 import logging
 from datetime import datetime
 from typing import List, Dict
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from ..database import get_db
 from .. import schemas, auth, models
@@ -24,8 +24,8 @@ logger = logging.getLogger(__name__)
 async def get_portfolios(
     current_user: models.User = Depends(auth.get_current_user),
     db: Session = Depends(get_db),
-    limit: int = 20,
-    offset: int = 0
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0)
 ):
     """
     Get all portfolios for the current user (paginated)

@@ -3,19 +3,23 @@ Authentication API endpoints
 """
 import uuid
 from datetime import datetime, timedelta
-from fastapi import APIRouter, Depends, HTTPException, status, Response
+from fastapi import APIRouter, Depends, HTTPException, status, Response, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 from ..database import get_db
 from ..config import get_settings
 from .. import schemas, auth, models
 
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
 settings = get_settings()
+limiter = Limiter(key_func=get_remote_address)
 
 
+@limiter.limit("3/minute")
 @router.post("/register", response_model=schemas.UserResponse, status_code=status.HTTP_201_CREATED)
-async def register(user_data: schemas.UserCreate, db: Session = Depends(get_db)):
+async def register(request: Request, user_data: schemas.UserCreate, db: Session = Depends(get_db)):
     """
     Register a new user account
     
@@ -28,8 +32,9 @@ async def register(user_data: schemas.UserCreate, db: Session = Depends(get_db))
     return user
 
 
+@limiter.limit("5/minute")
 @router.post("/login")
-async def login(response: Response, form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+async def login(request: Request, response: Response, form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     """
     Login and get access token via httpOnly cookie
 
@@ -63,8 +68,9 @@ async def login(response: Response, form_data: OAuth2PasswordRequestForm = Depen
     return {"message": "Login successful"}
 
 
+@limiter.limit("5/minute")
 @router.post("/login/json")
-async def login_json(response: Response, credentials: schemas.UserLogin, db: Session = Depends(get_db)):
+async def login_json(request: Request, response: Response, credentials: schemas.UserLogin, db: Session = Depends(get_db)):
     """
     Login with JSON body via httpOnly cookie
     """
@@ -158,8 +164,9 @@ async def change_password(
     return {"message": "Password updated successfully"}
 
 
+@limiter.limit("10/minute")
 @router.post("/guest")
-async def guest_login(response: Response, db: Session = Depends(get_db)):
+async def guest_login(request: Request, response: Response, db: Session = Depends(get_db)):
     """
     Continue as guest - creates a temporary guest account with sample portfolio data.
     """

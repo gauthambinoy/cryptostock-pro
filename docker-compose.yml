@@ -8,10 +8,10 @@ services:
     environment:
       DATABASE_URL: ${DATABASE_URL:-sqlite:///./data/quantumledger.db}
       DEBUG: "false"
-      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-*}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:?ALLOWED_ORIGINS must be set}
       NEWSAPI_KEY: ${NEWSAPI_KEY:-test}
       FRED_API_KEY: ${FRED_API_KEY:-test}
-      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-quantumledger-secret}
+      SECRET_KEY: ${SECRET_KEY:?SECRET_KEY must be set}
       REDDIT_CLIENT_ID: ${REDDIT_CLIENT_ID:-}
       REDDIT_CLIENT_SECRET: ${REDDIT_CLIENT_SECRET:-}
       TWITTER_BEARER_TOKEN: ${TWITTER_BEARER_TOKEN:-}

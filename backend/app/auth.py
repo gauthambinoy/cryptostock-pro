@@ -56,7 +56,7 @@ def decode_token(token: str) -> Optional[schemas.TokenData]:
             return None
 
         return schemas.TokenData(user_id=int(user_id_str))
-    except JWTError:
+    except (JWTError, ValueError, KeyError):
         return None
 
 

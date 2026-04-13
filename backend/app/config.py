@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     """Application settings loaded from environment variables"""
     
     # Database
-    database_url: str = "postgresql://localhost/cryptostock_db"
+    database_url: str = "postgresql://localhost/quantumledger_db"
     
     # Security
     secret_key: str = ""  # MUST be set via SECRET_KEY env var
@@ -40,7 +40,11 @@ class Settings(BaseSettings):
     stripe_enterprise_monthly_price_id: str = ""
     stripe_enterprise_annual_price_id: str = ""
 
+    # Redis
+    redis_url: str = "redis://localhost:6379/0"
+
     # Server
+    environment: str = "development"
     host: str = "0.0.0.0"
     port: int = 8000
     debug: bool = False
@@ -70,12 +74,18 @@ def setup_logging(debug: bool = False):
 
 @lru_cache()
 def get_settings() -> Settings:
-    """Get cached settings instance. Auto-generates secret key if not set."""
+    """Get cached settings instance. Raises ValueError in production if secret_key is missing."""
     settings = Settings()
     if not settings.secret_key:
+        if not settings.debug:
+            raise ValueError(
+                "SECRET_KEY environment variable must be set in production. "
+                "Set SECRET_KEY to a secure random string."
+            )
         import secrets
         settings.secret_key = secrets.token_urlsafe(64)
         logging.getLogger(__name__).warning(
-            "SECRET_KEY not set! Generated a random key. Set SECRET_KEY env var for production."
+            "SECRET_KEY not set! Auto-generated a random key. "
+            "This is only acceptable in debug mode. Set SECRET_KEY env var for production."
         )
     return settings
