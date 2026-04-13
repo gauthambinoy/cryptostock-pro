@@ -47,6 +47,19 @@ import {
 
 const CHART_COLORS = ['#0ea5e9', '#8b5cf6', '#22c55e', '#f59e0b', '#ec4899', '#14b8a6', '#f97316', '#ef4444'];
 
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+// Linear congruential generator constants (Numerical Recipes)
+const LCG_MULTIPLIER = 9301;
+const LCG_INCREMENT = 49297;
+const LCG_MODULUS = 233280;
+
+/** Returns a seeded pseudo-random number in [0, 1) */
+const seededRandom = (seed, index) =>
+  (((seed * (index + 1) * LCG_MULTIPLIER + LCG_INCREMENT) % LCG_MODULUS) / LCG_MODULUS);
+
+const LIVE_DOT_SMALL_STYLE = { width: 5, height: 5 };
+
 // ─── Animated counter hook ───
 const useCountUp = (end, duration = 1200) => {
   const [count, setCount] = useState(0);
@@ -145,8 +158,8 @@ const Dashboard = () => {
           }
         }
       }
-    } catch {
-      // Trading account not available
+    } catch (err) {
+      console.debug('Trading account unavailable:', err);
     }
   };
 
@@ -191,7 +204,7 @@ const Dashboard = () => {
     const arr = [];
     let val = seed || 50;
     for (let i = 0; i < points; i++) {
-      val += ((((seed * (i + 1) * 9301 + 49297) % 233280) / 233280) - 0.45) * 10;
+      val += (seededRandom(seed, i) - 0.45) * 10;
       arr.push({ v: Math.max(0, val) });
     }
     return arr;
@@ -208,10 +221,10 @@ const Dashboard = () => {
   const profitChartData = useMemo(() => {
     const seed = Math.round(totalValue) || 1000;
     return Array.from({ length: 24 }, (_, i) => ({
-      label: i % 4 === 0 ? ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][Math.floor(i / 2) % 12] : '',
+      label: i % 4 === 0 ? MONTHS[Math.floor(i / 2) % 12] : '',
       value: totalValue > 0
-        ? totalValue * (0.6 + ((((seed * (i + 1) * 9301 + 49297) % 233280) / 233280) * 0.5)) * ((i + 1) / 24)
-        : 500 + ((((seed * (i + 1) * 9301 + 49297) % 233280) / 233280) * 300) * (i / 24),
+        ? totalValue * (0.6 + seededRandom(seed, i) * 0.5) * ((i + 1) / 24)
+        : 500 + (seededRandom(seed, i) * 300) * (i / 24),
     }));
   }, [totalValue]);
 
@@ -418,7 +431,7 @@ const Dashboard = () => {
                     {Math.abs(totalGainLossPercent).toFixed(1)}%
                   </span>
                 )}
-                <span className="text-[11px] text-gray-500">vs last month</span>
+                <span className="text-[11px] text-gray-500">total return</span>
               </div>
               <div className="mt-3 h-8 opacity-60 group-hover:opacity-100 transition-opacity">
                 <MiniSparkline data={sparkData.portfolio} color="#0ea5e9" />
@@ -864,7 +877,7 @@ const Dashboard = () => {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm leading-snug">{item.text}</p>
                     <div className="flex items-center gap-1.5 mt-0.5">
-                      {item.live && <div className="live-dot" style={{ width: 5, height: 5 }} />}
+                      {item.live && <div className="live-dot" style={LIVE_DOT_SMALL_STYLE} />}
                       <p className="text-[11px] text-gray-500">{item.time}</p>
                     </div>
                   </div>
