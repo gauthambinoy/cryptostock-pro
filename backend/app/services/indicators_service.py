@@ -371,13 +371,13 @@ class IndicatorsService:
             positive_flow = sum([
                 raw_money_flow[j]
                 for j in range(i - period + 1, i + 1)
-                if close[j] > close[j - 1] if j > 0 else True
+                if (close[j] > close[j - 1] if j > 0 else True)
             ])
 
             negative_flow = sum([
                 raw_money_flow[j]
                 for j in range(i - period + 1, i + 1)
-                if close[j] < close[j - 1] if j > 0 else False
+                if (close[j] < close[j - 1] if j > 0 else False)
             ])
 
             if negative_flow == 0:
