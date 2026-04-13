@@ -83,11 +83,12 @@ const PublicRoute = ({ children }) => {
 };
 
 function App() {
-  const { initializeAuth } = useAuthStore();
+  const initializeAuth = useAuthStore((s) => s.initializeAuth);
 
   useEffect(() => {
     initializeAuth();
-  }, [initializeAuth]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <ErrorBoundary>

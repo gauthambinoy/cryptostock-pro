@@ -84,11 +84,12 @@ const PublicRoute: React.FC<RouteProps> = ({ children }) => {
 };
 
 function App() {
-  const { initializeAuth } = useAuthStore();
+  const initializeAuth = useAuthStore((s) => s.initializeAuth);
 
   useEffect(() => {
     initializeAuth();
-  }, [initializeAuth]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <ErrorBoundary>
@@ -159,7 +160,7 @@ function App() {
             </Route>
 
             {/* Catch all */}
-            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+            <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>
         </Router>
       </ThemeProvider>
