@@ -103,7 +103,7 @@ jobs:
         run: |
           docker run -d --name ql-test \
             -e SECRET_KEY=test-docker-key \
-            -e DATABASE_URL=sqlite:///./data/test.db \
+            -e DATABASE_URL=sqlite:////app/data/test.db \
             -e DEBUG=true \
             -p 8000:8000 \
             quantumledger:latest

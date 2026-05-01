@@ -33,7 +33,7 @@ RUN mkdir -p /app/data
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
-ENV DATABASE_URL=sqlite:///./data/quantumledger.db
+ENV DATABASE_URL=sqlite:////app/data/quantumledger.db
 
 # Expose port
 EXPOSE 8000
