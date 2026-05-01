@@ -17,6 +17,10 @@ settings = get_settings()
 limiter = Limiter(key_func=get_remote_address)
 
 
+def _secure_cookie() -> bool:
+    return not settings.debug and settings.environment != "testing"
+
+
 @limiter.limit("3/minute")
 @router.post("/register", response_model=schemas.UserResponse, status_code=status.HTTP_201_CREATED)
 async def register(request: Request, user_data: schemas.UserCreate, db: Session = Depends(get_db)):
@@ -61,7 +65,7 @@ async def login(request: Request, response: Response, form_data: OAuth2PasswordR
         value=access_token,
         max_age=settings.access_token_expire_minutes * 60,
         httponly=True,
-        secure=True,
+        secure=_secure_cookie(),
         samesite="lax"
     )
 
@@ -95,7 +99,7 @@ async def login_json(request: Request, response: Response, credentials: schemas.
         value=access_token,
         max_age=settings.access_token_expire_minutes * 60,
         httponly=True,
-        secure=True,
+        secure=_secure_cookie(),
         samesite="lax"
     )
 
@@ -107,7 +111,7 @@ async def logout(response: Response):
     """
     Logout user - clears authentication cookie
     """
-    response.delete_cookie("access_token", secure=True, samesite="lax")
+    response.delete_cookie("access_token", secure=_secure_cookie(), samesite="lax")
     return {"message": "Logout successful"}
 
 
@@ -249,7 +253,7 @@ async def guest_login(request: Request, response: Response, db: Session = Depend
         value=access_token,
         max_age=24 * 60 * 60,  # 24 hours
         httponly=True,
-        secure=True,
+        secure=_secure_cookie(),
         samesite="lax"
     )
 

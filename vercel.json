@@ -5,7 +5,7 @@
   "env": {
     "DATABASE_URL": "@database_url",
     "REDIS_URL": "@redis_url",
-    "JWT_SECRET_KEY": "@jwt_secret",
+    "SECRET_KEY": "@secret_key",
     "NEWSAPI_KEY": "@newsapi_key",
     "FRED_API_KEY": "@fred_api_key",
     "REDDIT_CLIENT_ID": "@reddit_client_id",

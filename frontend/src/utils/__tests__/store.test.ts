@@ -2,8 +2,31 @@
  * Unit tests for Zustand stores
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { useAuthStore, usePortfolioStore, useMarketStore, useAlertsStore } from '../store';
 
+vi.mock('../api', () => ({
+  authAPI: {
+    login: vi.fn().mockResolvedValue({ data: { message: 'success' } }),
+    logout: vi.fn().mockResolvedValue({ data: { message: 'success' } }),
+    getMe: vi.fn().mockResolvedValue({
+      data: {
+        id: 1,
+        email: 'test@example.com',
+        username: 'testuser',
+        full_name: 'Test User',
+        is_active: true,
+        created_at: new Date().toISOString(),
+      },
+    }),
+  },
+  portfolioAPI: {
+    getAll: vi.fn().mockResolvedValue({ data: [] }),
+    getHoldings: vi.fn().mockResolvedValue({ data: [] }),
+  },
+  marketAPI: {},
+  alertsAPI: {},
+}));
+
+import { useAuthStore, usePortfolioStore, useMarketStore, useAlertsStore } from '../store';
 describe('Auth Store', () => {
   beforeEach(() => {
     // Reset store state before each test
@@ -25,22 +48,12 @@ describe('Auth Store', () => {
 
   it('should set user when login succeeds', async () => {
     const { login } = useAuthStore.getState();
-    // Mock the login API call
-    vi.mock('../api', () => ({
-      authAPI: {
-        login: vi.fn().mockResolvedValue({ data: { message: 'success' } }),
-        getMe: vi.fn().mockResolvedValue({
-          data: {
-            id: 1,
-            email: 'test@example.com',
-            username: 'testuser',
-            full_name: 'Test User',
-            is_active: true,
-            created_at: new Date().toISOString(),
-          },
-        }),
-      },
-    }));
+    const result = await login('test@example.com', 'password');
+    const state = useAuthStore.getState();
+
+    expect(result).toBe(true);
+    expect(state.isAuthenticated).toBe(true);
+    expect(state.user?.email).toBe('test@example.com');
   });
 
   it('should set error on login failure', async () => {

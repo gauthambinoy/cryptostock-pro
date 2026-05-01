@@ -12,8 +12,6 @@ import {
   Legend,
   ComposedChart,
   Bar,
-  Cell,
-  Heatmap,
 } from 'recharts';
 import { TrendingUp, Target, AlertTriangle, BarChart3, Activity } from 'lucide-react';
 
