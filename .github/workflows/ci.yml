@@ -107,6 +107,13 @@ jobs:
             -e DEBUG=true \
             -p 8000:8000 \
             quantumledger:latest
-          sleep 10
-          curl -f http://localhost:8000/health || exit 1
+          for i in {1..30}; do
+            if curl -fsS http://localhost:8000/health; then
+              docker stop ql-test
+              exit 0
+            fi
+            sleep 2
+          done
+          docker logs ql-test
           docker stop ql-test
+          exit 1
